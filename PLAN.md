@@ -1080,7 +1080,7 @@ Migration:     RUN_MIGRATIONS=false
 - [x] 创建 `semo_admin` root 管理员，随机密码独立存入 Secret Manager；
 - [x] 当前版本初始化前不存在 root 用户，也没有 `root/123456`；
 - [x] 重复 `POST /api/setup` 返回 `success=false`，setup 不可重入；
-- [ ] 关闭自助注册、邮箱验证和默认 Token；初始化时已关闭 Demo/Self-use mode；
+- [x] 已关闭自助注册、密码注册、邮箱验证、Demo 和 Self-use mode；setup 创建的 root 没有默认 API Token；
 - [ ] 创建低权限日常管理员；
 - [ ] 配置一个低额度测试渠道；
 - [ ] 执行登录、Token、流式、扣费、缓存计费和断线测试；
