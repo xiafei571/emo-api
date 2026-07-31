@@ -199,6 +199,7 @@ jobs:
             --project="$PROJECT_ID" \
             --region="$REGION" \
             --image="$RELEASE_IMAGE" \
+            --remove-env-vars="VERSION" \
             --update-labels="release-version=${VERSION//./-},release-sha=${GITHUB_SHA:0:12}" \
             --quiet
 
