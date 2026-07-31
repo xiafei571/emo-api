@@ -1086,10 +1086,16 @@ Migration:     RUN_MIGRATIONS=false
 - [x] 当前版本初始化前不存在 root 用户，也没有 `root/123456`；
 - [x] 重复 `POST /api/setup` 返回 `success=false`，setup 不可重入；
 - [x] 已关闭自助注册、密码注册、邮箱验证、Demo 和 Self-use mode；setup 创建的 root 没有默认 API Token；
-- [ ] 创建低权限日常管理员；
-- [ ] 配置一个低额度测试渠道；
+- [x] 创建低权限日常管理员 `semo_info`；独立 20 位随机密码保存在 Secret Manager `semo-api-prod-daily-admin-password`，日常渠道权限不含敏感配置编辑和 Secret 查看；
+- [x] 配置低额度 OpenAI 测试渠道 `openai-prod-01`；上游 Project 初始 credits 为 USD 5，已验证 `gpt-5.6-luna` 非流式与 Responses SSE 流式渠道测试；
 - [ ] 执行登录、Token、流式、扣费、缓存计费和断线测试；
+  - [x] `semo_test` 普通用户登录及受限 Token；
+  - [x] `POST /v1/responses` 非流式端到端调用：HTTP 200，返回 `OK`，usage 为 input 10 / output 5 / total 15；
+  - [x] `POST /v1/responses` SSE 流式端到端调用：HTTP 200，事件完整到 `response.completed`，usage 为 input 11 / output 6 / total 17；
+- [x] Usage Logs 已复核两次请求：非流式 10/5 tokens、USD 0.000040；流式 11/6 tokens、USD 0.000048；总计 USD 0.000088，按 `gpt-5.6-luna` Standard USD 1/M input、USD 6/M output 正确计费；
+  - [ ] prompt cache、客户端断线、上游失败退款与并发长流测试；
 - [ ] 未实现 `count_tokens` 时不得宣称支持 Claude Code。
+- [ ] 完成合规共品牌：客户主品牌使用 `EMO API` 和 emo-web 机器人 Logo；页脚、About、许可证与上游链接继续保留 New API / QuantumNous 归属。
 
 ### Step 9：配置正式入口
 
@@ -1119,7 +1125,7 @@ Staging/Production MVP 在名义单实例阶段不创建 Redis，也不修改 Do
 
 ### Phase 0：决策
 
-- [x] MVP 保留 New API 原品牌，不做闭源去品牌改造；
+- [x] MVP 采用合规共品牌：客户主品牌为 EMO API，不做闭源去归属改造，并保留 New API / QuantumNous 上游归属；
 - [x] 上游转售条款作为团队接受的业务风险，不作为工程上线 blocker；
 - [x] MVP 使用现有 GCP Project，Phase 3 前迁移 production 到独立 Project；
 - [x] 仅管理员/邀请码创建用户，不开放自助注册；
