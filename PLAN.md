@@ -1024,11 +1024,12 @@ semo-api-prod-crypto-secret
 
 ### Step 5：构建、推送并固定 Artifact Registry 镜像
 
-- [ ] 为选定 commit 构建 `linux/amd64` 镜像；
-- [ ] 推送 commit SHA tag，不推 `latest` 作为部署依据；
-- [ ] 读取 Artifact Registry 返回的不可变 digest；
+- [x] 为 fork commit `d454b967068b957d9ca7025b6fdd80d055ea73b2` 构建 `linux/amd64` 镜像；
+- [x] 推送完整 commit SHA tag，没有推送或部署 `latest`；
+- [x] Artifact Registry 不可变 digest 为
+  `sha256:b325e426f7d68025d5920e91d9f06750f4099da7b780cb55604f9f3445ac1b6a`；
 - [ ] 扫描镜像；
-- [ ] Cloud Run 和 migration Job 都引用同一 digest。
+- [x] Cloud Run 和 migration Job 都引用同一 digest。
 
 拟定地址：
 
@@ -1038,14 +1039,14 @@ asia-northeast1-docker.pkg.dev/semo-ai-503410/emo/semo-api@sha256:<DIGEST>
 
 ### Step 6：运行 Migration Job
 
-- [ ] 创建 `semo-api-migrate-staging` Cloud Run Job；
-- [ ] 连接 `semo-api-pg-staging`；
-- [ ] 从 Secret Manager 注入 `SQL_DSN`；
-- [ ] 设置 `MIGRATION_ONLY=true`；
-- [ ] 执行一次并保存 execution ID；
-- [ ] 日志确认 driver 为 PostgreSQL；
+- [x] 创建 `semo-api-migrate-prod` Cloud Run Job；
+- [x] 连接 `semo-api-pg-prod`；
+- [x] 从 Secret Manager 注入 `SQL_DSN`；
+- [x] 设置 `MIGRATION_ONLY=true`；
+- [x] 首次 execution `semo-api-migrate-prod-fqgv9` 成功；
+- [x] 日志确认 driver 为 PostgreSQL，且获取 advisory lock 后以 0 退出；
 - [ ] 查询 schema 确认表/index 创建成功；
-- [ ] 再并发执行两次，确认 advisory lock 阻止竞态。
+- [x] 并发触发 `79zrr`、`t6v2p` 两次 execution，二者均获取 advisory lock 并成功退出。
 
 Job 失败时停止，不部署 service。
 
@@ -1065,21 +1066,21 @@ Ingress:       暂不开放公网
 Migration:     RUN_MIGRATIONS=false
 ```
 
-- [ ] 挂载 Cloud SQL connection；
-- [ ] 从 Secret Manager 注入 `SQL_DSN`、`SESSION_SECRET`、`CRYPTO_SECRET`；
-- [ ] 设置连接池、stream timeout 和关闭默认 Token 等环境变量；
-- [ ] 禁止未授权公网访问；
-- [ ] 验证 `/api/status`；
-- [ ] 验证 `/api/setup` 的 `database_type` 为 PostgreSQL；
-- [ ] 确认 service 启动日志没有运行 migration。
+- [x] 挂载 Cloud SQL connection；
+- [x] 从 Secret Manager 注入 `SQL_DSN`、`SESSION_SECRET`、`CRYPTO_SECRET`；
+- [x] 设置连接池、stream timeout、Secure Cookie、trusted origin 和 proxy trust 等环境变量；
+- [x] 禁止未授权公网访问，匿名请求返回 403；
+- [x] 认证访问 `/api/status` 返回 200；
+- [x] 初始化前 `/api/setup` 的 `database_type` 为 `postgres`；
+- [x] service 日志明确显示 `database migration skipped`。
 
 ### Step 8：受控初始化与功能验证
 
-- [ ] 只允许运维来源访问；
-- [ ] 创建随机高熵 root 密码；
-- [ ] 检查不存在 `root/123456`；
-- [ ] setup 不可重入；
-- [ ] 关闭自助注册、邮箱验证、演示账号和默认 Token；
+- [x] 当前只允许通过 Cloud Run IAM 认证的访问；
+- [x] 创建 `semo_admin` root 管理员，随机密码独立存入 Secret Manager；
+- [x] 当前版本初始化前不存在 root 用户，也没有 `root/123456`；
+- [x] 重复 `POST /api/setup` 返回 `success=false`，setup 不可重入；
+- [ ] 关闭自助注册、邮箱验证和默认 Token；初始化时已关闭 Demo/Self-use mode；
 - [ ] 创建低权限日常管理员；
 - [ ] 配置一个低额度测试渠道；
 - [ ] 执行登录、Token、流式、扣费、缓存计费和断线测试；
@@ -1088,7 +1089,7 @@ Migration:     RUN_MIGRATIONS=false
 ### Step 9：配置正式入口
 
 - [ ] 创建 Global External Application Load Balancer；
-- [ ] 创建 serverless NEG 指向 `semo-api-staging`；
+- [ ] 创建 serverless NEG 指向 `semo-api-prod`；
 - [ ] 创建 Cloud Armor policy，先使用运维 IP allowlist；
 - [ ] Cloud Run ingress 改为 internal and cloud load balancing；
 - [ ] 禁用默认 `run.app` URL；
