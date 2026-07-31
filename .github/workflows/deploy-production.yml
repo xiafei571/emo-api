@@ -1,0 +1,233 @@
+name: Deploy production on version bump
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - VERSION
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: semo-api-production
+  cancel-in-progress: false
+
+env:
+  PROJECT_ID: semo-ai-503410
+  PROJECT_NUMBER: '927304771205'
+  REGION: asia-northeast1
+  REPOSITORY: semo-api
+  IMAGE_NAME: new-api
+  SERVICE_NAME: semo-api-prod
+  MIGRATION_JOB: semo-api-migrate-prod
+  DEPLOYER_SERVICE_ACCOUNT: github-semo-api-deployer@semo-ai-503410.iam.gserviceaccount.com
+  WORKLOAD_IDENTITY_PROVIDER: projects/927304771205/locations/global/workloadIdentityPools/github/providers/emo-api
+
+jobs:
+  version-gate:
+    name: Verify strict version increase
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 2
+
+      - name: Require a stable SemVer increase
+        id: version
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+
+          new_version="$(tr -d '[:space:]' < VERSION)"
+          old_version="$(git show "${BEFORE_SHA}:VERSION" | tr -d '[:space:]')"
+
+          python3 - "$old_version" "$new_version" <<'PY'
+          import re
+          import sys
+
+          old_version, new_version = sys.argv[1:3]
+          pattern = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
+
+          def parse(version: str) -> tuple[int, int, int]:
+              match = pattern.fullmatch(version)
+              if not match:
+                  raise ValueError(
+                      f"{version!r} is not stable SemVer; expected MAJOR.MINOR.PATCH"
+                  )
+              return tuple(int(part) for part in match.groups())
+
+          new_value = parse(new_version)
+          if old_version == "afe16c64-semo.1":
+              old_value = (0, 0, 0)
+              print(f"Migrating legacy version {old_version} to SemVer.")
+          else:
+              old_value = parse(old_version)
+
+          if new_value <= old_value:
+              raise SystemExit(
+                  f"VERSION must increase: old={old_version}, new={new_version}"
+              )
+
+          print(f"Version gate passed: {old_version} -> {new_version}")
+          PY
+
+          echo "version=$new_version" >> "$GITHUB_OUTPUT"
+
+  build-and-deploy:
+    name: Build immutable image and deploy
+    needs: version-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      VERSION: ${{ needs.version-gate.outputs.version }}
+      IMAGE: asia-northeast1-docker.pkg.dev/semo-ai-503410/semo-api/new-api
+
+    steps:
+      - name: Check out release commit
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Configure Artifact Registry authentication
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Reuse an existing immutable version image
+        id: existing
+        run: |
+          set -euo pipefail
+
+          digest="$(
+            gcloud artifacts docker images describe "${IMAGE}:${VERSION}" \
+              --project="$PROJECT_ID" \
+              --format='value(image_summary.digest)' \
+              2>/dev/null || true
+          )"
+
+          if [[ -n "$digest" ]]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "digest=$digest" >> "$GITHUB_OUTPUT"
+            echo "Reusing ${IMAGE}@${digest}"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.existing.outputs.found != 'true'
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Build and push version image
+        id: build
+        if: steps.existing.outputs.found != 'true'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.IMAGE }}:${{ env.VERSION }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      - name: Resolve immutable image digest
+        id: image
+        env:
+          EXISTING_DIGEST: ${{ steps.existing.outputs.digest }}
+          BUILT_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          digest="${EXISTING_DIGEST:-${BUILT_DIGEST:-}}"
+          if [[ ! "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Invalid or missing image digest: $digest"
+            exit 1
+          fi
+
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "image=${IMAGE}@${digest}" >> "$GITHUB_OUTPUT"
+
+      - name: Update and execute migration job
+        env:
+          RELEASE_IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          set -euo pipefail
+
+          gcloud run jobs update "$MIGRATION_JOB" \
+            --project="$PROJECT_ID" \
+            --region="$REGION" \
+            --image="$RELEASE_IMAGE" \
+            --quiet
+
+          gcloud run jobs execute "$MIGRATION_JOB" \
+            --project="$PROJECT_ID" \
+            --region="$REGION" \
+            --wait \
+            --quiet
+
+      - name: Deploy Cloud Run service
+        env:
+          RELEASE_IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          gcloud run services update "$SERVICE_NAME" \
+            --project="$PROJECT_ID" \
+            --region="$REGION" \
+            --image="$RELEASE_IMAGE" \
+            --update-labels="release-version=${VERSION//./-},release-sha=${GITHUB_SHA:0:12}" \
+            --quiet
+
+      - name: Verify deployed revision
+        env:
+          RELEASE_IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          set -euo pipefail
+
+          service_json="$(
+            gcloud run services describe "$SERVICE_NAME" \
+              --project="$PROJECT_ID" \
+              --region="$REGION" \
+              --format=json
+          )"
+
+          deployed_image="$(jq -r '.spec.template.spec.containers[0].image' <<< "$service_json")"
+          latest_ready="$(jq -r '.status.latestReadyRevisionName' <<< "$service_json")"
+          latest_percent="$(
+            jq -r --arg revision "$latest_ready" \
+              '[.status.traffic[] | select(.revisionName == $revision) | .percent] | add // 0' \
+              <<< "$service_json"
+          )"
+
+          if [[ "$deployed_image" != "$RELEASE_IMAGE" ]]; then
+            echo "::error::Expected $RELEASE_IMAGE, deployed $deployed_image"
+            exit 1
+          fi
+          if [[ "$latest_percent" != "100" ]]; then
+            echo "::error::Latest ready revision has ${latest_percent}% traffic"
+            exit 1
+          fi
+
+          {
+            echo "### Production deployment"
+            echo "- Version: \`$VERSION\`"
+            echo "- Image: \`$RELEASE_IMAGE\`"
+            echo "- Revision: \`$latest_ready\`"
+            echo "- Traffic: \`100%\`"
+          } >> "$GITHUB_STEP_SUMMARY"

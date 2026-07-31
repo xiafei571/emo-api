@@ -1124,6 +1124,18 @@ Staging/Production MVP 在名义单实例阶段不创建 Redis，也不修改 Do
 5. 验证跨实例限流、Session、Token 撤销和 Redis 故障行为；
 6. 验证完成后才把 Cloud Run `max instances` 提高到 2 以上。
 
+### Step 11：版本门禁与 Production CI/CD
+
+- [x] `VERSION` 迁移为稳定 SemVer，初始版本为 `0.1.0`；
+- [x] 只有 `main` 分支上的 `VERSION` 文件发生变化才触发 production workflow；
+- [x] workflow 校验新版本严格大于旧版本，拒绝相同版本、降级和非 `MAJOR.MINOR.PATCH` 格式；
+- [x] GitHub Actions 使用现有 Workload Identity Federation provider `emo-api`，不保存 GCP service account key；
+- [ ] 为 `github-semo-api-deployer` 补充 `semo-api` Artifact Registry 仓库级 Writer；本机 `gcloud` 需要重新登录后执行；
+- [x] 镜像使用不可变版本 tag，并在部署时固定到 digest；
+- [x] 同一版本 workflow 重跑时复用 Artifact Registry 已有 digest；
+- [x] 发布顺序固定为：构建/复用镜像 → 更新并执行 migration Job → 更新 Cloud Run service → 验证最新 revision 为 100% 流量；
+- [ ] 将 workflow 合入 GitHub 默认分支 `main` 后执行首次 `0.1.0` 自动发布；
+
 ## 18. 上线阶段
 
 ### Phase 0：决策
