@@ -22,42 +22,50 @@ import { useTranslation } from 'react-i18next'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useSystemConfig } from '@/hooks/use-system-config'
 
+import { authLayoutClasses } from './lib/auth-layout'
+
 type AuthLayoutProps = {
   children: React.ReactNode
 }
 
-export function AuthLayout({ children }: AuthLayoutProps) {
+export function AuthLayout(props: AuthLayoutProps) {
   const { t } = useTranslation()
   const { systemName, logo, loading } = useSystemConfig()
 
   return (
-    <div className='relative grid h-svh max-w-none'>
-      <Link
-        to='/'
-        className='absolute top-4 left-4 z-10 flex items-center gap-2 transition-opacity hover:opacity-80 sm:top-8 sm:left-8'
-      >
-        <div className='relative h-8 w-8'>
+    <main className={authLayoutClasses.page}>
+      <div
+        aria-hidden='true'
+        className='pointer-events-none absolute inset-x-0 top-0 h-64 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.08),transparent_68%)] dark:bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.14),transparent_68%)]'
+      />
+      <div className={authLayoutClasses.shell}>
+        <Link
+          to='/'
+          className='mx-auto mb-6 flex items-center gap-2 rounded-full px-2 py-1.5 transition-opacity hover:opacity-80 sm:mb-7'
+        >
+          <div className='relative h-8 w-8'>
+            {loading ? (
+              <Skeleton className='absolute inset-0 rounded-full' />
+            ) : (
+              <img
+                src={logo}
+                alt={t('Logo')}
+                className='h-8 w-8 rounded-full object-cover'
+              />
+            )}
+          </div>
           {loading ? (
-            <Skeleton className='absolute inset-0 rounded-full' />
+            <Skeleton className='h-6 w-24' />
           ) : (
-            <img
-              src={logo}
-              alt={t('Logo')}
-              className='h-8 w-8 rounded-full object-cover'
-            />
+            <span className='text-sm font-semibold tracking-tight'>
+              {systemName}
+            </span>
           )}
-        </div>
-        {loading ? (
-          <Skeleton className='h-6 w-24' />
-        ) : (
-          <h1 className='text-xl font-medium'>{systemName}</h1>
-        )}
-      </Link>
-      <div className='container flex items-center pt-16 sm:pt-0'>
-        <div className='mx-auto flex w-full flex-col justify-center space-y-2 px-4 py-8 sm:w-[480px] sm:p-8'>
-          {children}
-        </div>
+        </Link>
+        <section className={authLayoutClasses.content}>
+          {props.children}
+        </section>
       </div>
-    </div>
+    </main>
   )
 }

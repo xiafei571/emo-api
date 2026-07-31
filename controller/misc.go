@@ -119,9 +119,11 @@ func GetStatus(c *gin.Context) {
 		"passkey_user_verification":   passkeySetting.UserVerification,
 		"passkey_attachment":          passkeySetting.AttachmentPreference,
 		"setup":                       constant.Setup,
-		"user_agreement_enabled":      legalSetting.UserAgreement != "",
-		"privacy_policy_enabled":      legalSetting.PrivacyPolicy != "",
-		"checkin_enabled":             operation_setting.GetCheckinSetting().Enabled,
+		// EMO API ships a localized built-in agreement in the web client. Keep
+		// consent enabled even when no administrator-authored override exists.
+		"user_agreement_enabled": true,
+		"privacy_policy_enabled": true,
+		"checkin_enabled":        operation_setting.GetCheckinSetting().Enabled,
 	}
 
 	// 根据启用状态注入可选内容

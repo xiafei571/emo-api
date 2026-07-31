@@ -16,28 +16,10 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useTranslation } from 'react-i18next'
-
-import { normalizeInterfaceLanguage } from '@/i18n/languages'
-
-import { getEmoPrivacyPolicy } from './emo-privacy-policy'
-import { LegalDocument } from './legal-document'
-
-export function PrivacyPolicy() {
-  const { t, i18n } = useTranslation()
-  const language = normalizeInterfaceLanguage(
-    i18n.resolvedLanguage ?? i18n.language
-  )
-  const content = getEmoPrivacyPolicy(language)
-
-  return (
-    <LegalDocument
-      title={t('Privacy Policy')}
-      queryKey={['privacy-policy', language]}
-      content={content}
-      emptyMessage={t(
-        'The administrator has not configured a privacy policy yet.'
-      )}
-    />
-  )
-}
+export const authLayoutClasses = {
+  page: 'relative min-h-svh overflow-y-auto bg-background',
+  shell:
+    'relative z-10 mx-auto flex min-h-svh w-full max-w-[440px] flex-col px-4 py-6 sm:px-6 sm:py-9',
+  content:
+    'w-full rounded-3xl border border-border/60 bg-background/95 p-5 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.42)] backdrop-blur-sm sm:p-8',
+} as const

@@ -16,28 +16,11 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { useTranslation } from 'react-i18next'
+import type { SystemStatus } from '../types'
 
-import { normalizeInterfaceLanguage } from '@/i18n/languages'
+export function isRegistrationAvailable(status: SystemStatus | null): boolean {
+  const registrationEnabled =
+    status?.register_enabled ?? status?.data?.register_enabled
 
-import { getEmoPrivacyPolicy } from './emo-privacy-policy'
-import { LegalDocument } from './legal-document'
-
-export function PrivacyPolicy() {
-  const { t, i18n } = useTranslation()
-  const language = normalizeInterfaceLanguage(
-    i18n.resolvedLanguage ?? i18n.language
-  )
-  const content = getEmoPrivacyPolicy(language)
-
-  return (
-    <LegalDocument
-      title={t('Privacy Policy')}
-      queryKey={['privacy-policy', language]}
-      content={content}
-      emptyMessage={t(
-        'The administrator has not configured a privacy policy yet.'
-      )}
-    />
-  )
+  return registrationEnabled !== false
 }

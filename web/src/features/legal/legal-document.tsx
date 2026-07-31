@@ -31,9 +31,10 @@ import type { LegalDocumentResponse } from './types'
 
 type LegalDocumentProps = {
   title: string
-  queryKey: string
-  fetchDocument: () => Promise<LegalDocumentResponse>
+  queryKey: string | readonly unknown[]
+  fetchDocument?: () => Promise<LegalDocumentResponse>
   emptyMessage: string
+  content?: string
 }
 
 export function LegalDocument({
@@ -41,21 +42,28 @@ export function LegalDocument({
   queryKey,
   fetchDocument,
   emptyMessage,
+  content,
 }: LegalDocumentProps) {
   const { t } = useTranslation()
   const { data, isLoading } = useQuery({
-    queryKey: [queryKey],
-    queryFn: fetchDocument,
+    queryKey: Array.isArray(queryKey) ? queryKey : [queryKey],
+    queryFn: async () => {
+      if (!fetchDocument) {
+        return { success: false, message: '', data: '' }
+      }
+      return fetchDocument()
+    },
+    enabled: content === undefined,
     staleTime: 10 * 60 * 1000,
   })
 
-  const rawContent = data?.data?.trim() ?? ''
+  const rawContent = content?.trim() ?? data?.data?.trim() ?? ''
   const hasContent = rawContent.length > 0
   const isUrl = hasContent && isHttpUrl(rawContent)
   const contentIsHtml = hasContent && isLikelyHtml(rawContent)
-  const success = data?.success ?? false
+  const success = content !== undefined || (data?.success ?? false)
 
-  if (isLoading) {
+  if (content === undefined && isLoading) {
     return (
       <PublicLayout>
         <div className='mx-auto flex max-w-4xl flex-col gap-4 py-12'>

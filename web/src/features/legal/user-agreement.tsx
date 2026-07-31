@@ -18,16 +18,23 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useTranslation } from 'react-i18next'
 
-import { getUserAgreement } from './api'
+import { normalizeInterfaceLanguage } from '@/i18n/languages'
+
+import { getEmoUserAgreement } from './emo-user-agreement'
 import { LegalDocument } from './legal-document'
 
 export function UserAgreement() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const language = normalizeInterfaceLanguage(
+    i18n.resolvedLanguage ?? i18n.language
+  )
+  const content = getEmoUserAgreement(language)
+
   return (
     <LegalDocument
       title={t('User Agreement')}
-      queryKey='user-agreement'
-      fetchDocument={getUserAgreement}
+      queryKey={['user-agreement', language]}
+      content={content}
       emptyMessage={t(
         'The administrator has not configured a user agreement yet.'
       )}

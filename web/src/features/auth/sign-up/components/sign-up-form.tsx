@@ -247,6 +247,15 @@ export function SignUpForm({
         className={cn('grid gap-4', className)}
         {...props}
       >
+        {oauthRegisterEnabled && (
+          <OAuthProviders
+            status={status}
+            disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
+            onWeChatLogin={hasWeChatLogin ? handleOpenWeChatDialog : undefined}
+            isWeChatLoading={isWeChatSubmitting}
+          />
+        )}
+
         {/* Username Field */}
         <FormField
           control={form.control}
@@ -255,7 +264,12 @@ export function SignUpForm({
             <FormItem>
               <FormLabel>{t('Username')}</FormLabel>
               <FormControl>
-                <Input placeholder={t('Enter your username')} {...field} />
+                <Input
+                  placeholder={t('Enter your username')}
+                  autoComplete='username'
+                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -272,6 +286,8 @@ export function SignUpForm({
               <FormControl>
                 <PasswordInput
                   placeholder={t('Enter password (8-20 characters)')}
+                  autoComplete='new-password'
+                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
                   {...field}
                 />
               </FormControl>
@@ -288,7 +304,12 @@ export function SignUpForm({
             <FormItem>
               <FormLabel>{t('Confirm password')}</FormLabel>
               <FormControl>
-                <PasswordInput placeholder={t('Confirm password')} {...field} />
+                <PasswordInput
+                  placeholder={t('Confirm password')}
+                  autoComplete='new-password'
+                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -311,6 +332,8 @@ export function SignUpForm({
                     <Input
                       placeholder={t('name@example.com')}
                       type='email'
+                      autoComplete='email'
+                      className='h-11 rounded-xl px-3.5 text-sm shadow-none'
                       {...field}
                     />
                   </FormControl>
@@ -324,6 +347,8 @@ export function SignUpForm({
               <div className='flex-1'>
                 <Input
                   placeholder={t('Verification code')}
+                  autoComplete='one-time-code'
+                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                 />
@@ -339,6 +364,7 @@ export function SignUpForm({
                   !turnstileReady
                 }
                 onClick={handleSendVerificationCode}
+                className='h-11 rounded-xl px-3.5 text-sm shadow-none'
               >
                 {verificationCodeAction}
               </Button>
@@ -367,7 +393,7 @@ export function SignUpForm({
         {/* Submit Button */}
         <Button
           type='submit'
-          className='mt-2 w-full justify-center gap-2'
+          className='mt-1 h-11 w-full justify-center gap-2 rounded-xl text-sm font-medium'
           disabled={
             isLoading ||
             (requiresLegalConsent && !agreedToLegal) ||
@@ -377,16 +403,6 @@ export function SignUpForm({
           {isLoading ? <Loader2 className='h-4 w-4 animate-spin' /> : null}
           {t('Create account')}
         </Button>
-
-        {oauthRegisterEnabled && (
-          <OAuthProviders
-            status={status}
-            disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
-            onWeChatLogin={hasWeChatLogin ? handleOpenWeChatDialog : undefined}
-            isWeChatLoading={isWeChatSubmitting}
-            className='pt-2'
-          />
-        )}
       </form>
 
       {hasWeChatLogin && (

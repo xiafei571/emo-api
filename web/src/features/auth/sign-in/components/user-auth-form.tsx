@@ -307,13 +307,13 @@ export function UserAuthForm({
   const alternativeLoginMethods = (
     <>
       {passkeyLoginEnabled && (
-        <div className='mt-2 space-y-1'>
+        <div className='space-y-1'>
           <Button
             type='button'
             variant='outline'
             disabled={passkeyButtonDisabled}
             onClick={handlePasskeyLogin}
-            className='h-11 w-full justify-center gap-2 rounded-lg'
+            className='h-12 w-full justify-center gap-2 rounded-xl text-base shadow-none'
           >
             {isPasskeyLoading ? (
               <Loader2 className='h-4 w-4 animate-spin' />
@@ -362,6 +362,8 @@ export function UserAuthForm({
                   <FormControl>
                     <Input
                       placeholder={t('Enter your username or email')}
+                      autoComplete='username'
+                      className='h-11 rounded-xl px-3.5 text-sm shadow-none'
                       {...field}
                     />
                   </FormControl>
@@ -380,13 +382,15 @@ export function UserAuthForm({
                   <FormControl>
                     <PasswordInput
                       placeholder={t('Enter password')}
+                      autoComplete='current-password'
+                      className='h-11 rounded-xl px-3.5 text-sm shadow-none'
                       {...field}
                     />
                   </FormControl>
                   <FormMessage />
                   <Link
                     to='/forgot-password'
-                    className='text-muted-foreground absolute end-0 -top-0.5 z-10 text-sm font-medium hover:opacity-75'
+                    className='text-muted-foreground absolute end-0 top-0 z-10 text-xs font-medium hover:opacity-75'
                   >
                     {t('Forgot password?')}
                   </Link>
@@ -394,19 +398,9 @@ export function UserAuthForm({
               )}
             />
 
-            {/* Submit Button */}
-            <Button
-              type='submit'
-              className='mt-2 w-full justify-center gap-2'
-              disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
-            >
-              {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
-              {t('Sign in')}
-            </Button>
-
             {/* Turnstile */}
             {isTurnstileEnabled && (
-              <div className='mt-2'>
+              <div>
                 <Turnstile
                   siteKey={turnstileSiteKey}
                   onVerify={setTurnstileToken}
@@ -420,10 +414,18 @@ export function UserAuthForm({
           status={status}
           checked={agreedToLegal}
           onCheckedChange={setAgreedToLegal}
-          className='mt-1'
         />
 
-        {!hasAlternativeLogin && alternativeLoginMethods}
+        {passwordLoginEnabled && (
+          <Button
+            type='submit'
+            className='h-11 w-full justify-center gap-2 rounded-xl text-sm font-medium'
+            disabled={isLoading || (requiresLegalConsent && !agreedToLegal)}
+          >
+            {isLoading ? <Loader2 className='animate-spin' /> : <LogIn />}
+            {t('Sign in')}
+          </Button>
+        )}
       </form>
 
       {hasWeChatLogin && (
