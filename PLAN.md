@@ -333,7 +333,7 @@ Cloud Run service       semo-api
 Cloud SQL instance      semo-api-pg
 Cloud SQL database      newapi
 Cloud SQL user          newapi_app
-Artifact Registry       emo/semo-api
+Artifact Registry       semo-api/new-api
 Runtime service account semo-api-runtime
 Deployer account        github-semo-api-deployer
 Secret: DB DSN          semo-api-sql-dsn
@@ -940,7 +940,7 @@ cloudbuild.googleapis.com（仅在使用 Cloud Build 时）
 创建：
 
 ```text
-Artifact Registry repository: emo（已存在，可复用）
+Artifact Registry repository: semo-api（production 专用，immutable tags）
 Runtime service account:       semo-api-staging-runtime
 Migration service account:     semo-api-staging-migrate
 GitHub deployer account:        github-semo-api-deployer
@@ -965,7 +965,8 @@ GitHub deployer account:        github-semo-api-deployer
 
 - [x] 必需 API 均为 enabled（含 Cloud Run、Cloud SQL Admin、Artifact Registry、Secret Manager、IAM Credentials、Compute、Cloud Build）；
 - [x] 三个 `emo-api` 专用 service accounts 已创建并启用；
-- [x] Artifact Registry `emo` 已存在于 `asia-northeast1`，格式为 Docker；
+- [x] 最初复用的 `emo` 仓库存在会删除非 `emo-web` 镜像的 cleanup policy；
+- [x] 已创建 production 专用 Artifact Registry `semo-api`，格式为 Docker，并启用 immutable tags；
 - [x] runtime/migration 仅获得 Cloud SQL Client；deployer 获得 repo writer、Cloud Run Developer 和对两个 runtime account 的 Service Account User；
 - [x] WIF provider `github/emo-api` 已创建且只接受 `xiafei571/emo-api`；
 - [x] IAM policy 检查不存在明显过宽的 `emo-api` 角色。
@@ -1026,15 +1027,17 @@ semo-api-prod-crypto-secret
 
 - [x] 为 fork commit `d454b967068b957d9ca7025b6fdd80d055ea73b2` 构建 `linux/amd64` 镜像；
 - [x] 推送完整 commit SHA tag，没有推送或部署 `latest`；
-- [x] Artifact Registry 不可变 digest 为
+- [x] Artifact Registry index digest 为
   `sha256:b325e426f7d68025d5920e91d9f06750f4099da7b780cb55604f9f3445ac1b6a`；
+- [x] Cloud Run 使用的 `linux/amd64` manifest digest 为
+  `sha256:bbc3b44db6c837740a2023bdf7e403078b88c098d3ac55f5c7eaf66773d7bb9e`；
 - [ ] 扫描镜像；
 - [x] Cloud Run 和 migration Job 都引用同一 digest。
 
 拟定地址：
 
 ```text
-asia-northeast1-docker.pkg.dev/semo-ai-503410/emo/semo-api@sha256:<DIGEST>
+asia-northeast1-docker.pkg.dev/semo-ai-503410/semo-api/new-api@sha256:bbc3b44db6c837740a2023bdf7e403078b88c098d3ac55f5c7eaf66773d7bb9e
 ```
 
 ### Step 6：运行 Migration Job
@@ -1073,6 +1076,8 @@ Migration:     RUN_MIGRATIONS=false
 - [x] 认证访问 `/api/status` 返回 200；
 - [x] 初始化前 `/api/setup` 的 `database_type` 为 `postgres`；
 - [x] service 日志明确显示 `database migration skipped`。
+- [x] service-level 与 revision-level 最大实例数均固定为 1；service-level 最小实例数为 1。
+- [x] 最新健康 revision 为 `semo-api-prod-00004-chx`，使用 production 专用 immutable 仓库。
 
 ### Step 8：受控初始化与功能验证
 
