@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
@@ -53,6 +54,8 @@ func initCol() {
 var DB *gorm.DB
 
 var LOG_DB *gorm.DB
+
+const migrationAdvisoryLockName = "new-api-database-migration"
 
 func createRootAccountIfNeed() error {
 	var user User
@@ -194,19 +197,54 @@ func InitDB() (err error) {
 		sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
 		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
 
-		if !common.IsMasterNode {
+		if !common.IsMasterNode || !shouldRunMigrations() {
+			common.SysLog("database migration skipped")
 			return nil
 		}
 		if common.UsingMainDatabase(common.DatabaseTypeMySQL) {
 			//_, _ = sqlDB.Exec("ALTER TABLE channels MODIFY model_mapping TEXT;") // TODO: delete this line when most users have upgraded
 		}
 		common.SysLog("database migration started")
-		err = migrateDB()
+		err = runMigrationsWithLock(DB, common.UsingMainDatabase(common.DatabaseTypePostgreSQL), migrateDB)
 		return err
 	} else {
 		common.FatalLog(err)
 	}
 	return err
+}
+
+func shouldRunMigrations() bool {
+	return common.GetEnvOrDefaultBool("RUN_MIGRATIONS", true)
+}
+
+func runMigrationsWithLock(db *gorm.DB, isPostgreSQL bool, migrate func() error) (err error) {
+	if !isPostgreSQL {
+		return migrate()
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return fmt.Errorf("get database connection pool for migration lock: %w", err)
+	}
+	conn, err := sqlDB.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("get dedicated database connection for migration lock: %w", err)
+	}
+	defer conn.Close()
+
+	ctx := context.Background()
+	if _, err = conn.ExecContext(ctx, "SELECT pg_advisory_lock(hashtext($1))", migrationAdvisoryLockName); err != nil {
+		return fmt.Errorf("acquire PostgreSQL migration advisory lock: %w", err)
+	}
+	common.SysLog("PostgreSQL migration advisory lock acquired")
+	defer func() {
+		_, unlockErr := conn.ExecContext(ctx, "SELECT pg_advisory_unlock(hashtext($1))", migrationAdvisoryLockName)
+		if unlockErr != nil && err == nil {
+			err = fmt.Errorf("release PostgreSQL migration advisory lock: %w", unlockErr)
+		}
+	}()
+
+	return migrate()
 }
 
 func InitLogDB() (err error) {
@@ -238,11 +276,12 @@ func InitLogDB() (err error) {
 		sqlDB.SetMaxOpenConns(common.GetEnvOrDefault("SQL_MAX_OPEN_CONNS", 1000))
 		sqlDB.SetConnMaxLifetime(time.Second * time.Duration(common.GetEnvOrDefault("SQL_MAX_LIFETIME", 60)))
 
-		if !common.IsMasterNode {
+		if !common.IsMasterNode || !shouldRunMigrations() {
+			common.SysLog("log database migration skipped")
 			return nil
 		}
 		common.SysLog("database migration started")
-		err = migrateLOGDB()
+		err = runMigrationsWithLock(LOG_DB, common.UsingLogDatabase(common.DatabaseTypePostgreSQL), migrateLOGDB)
 		return err
 	} else {
 		common.FatalLog(err)

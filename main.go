@@ -57,6 +57,13 @@ func main() {
 		common.FatalLog("failed to initialize resources: " + err.Error())
 		return
 	}
+	if common.GetEnvOrDefaultBool("MIGRATION_ONLY", false) {
+		common.SysLog("database migration completed; exiting migration-only process")
+		if err := model.CloseDB(); err != nil {
+			common.FatalLog("failed to close database after migration: " + err.Error())
+		}
+		return
+	}
 
 	common.SysLog("New API " + common.Version + " started")
 	if os.Getenv("GIN_MODE") != "debug" {
@@ -308,6 +315,15 @@ func InitResources() error {
 	if err != nil {
 		common.FatalLog("failed to initialize database: " + err.Error())
 		return err
+	}
+	if common.GetEnvOrDefaultBool("MIGRATION_ONLY", false) {
+		if !common.GetEnvOrDefaultBool("RUN_MIGRATIONS", true) {
+			return errors.New("MIGRATION_ONLY requires RUN_MIGRATIONS=true")
+		}
+		if err = model.InitLogDB(); err != nil {
+			return err
+		}
+		return nil
 	}
 	if err = authz.Init(model.DB); err != nil {
 		common.FatalLog("failed to initialize authorization: " + err.Error())
