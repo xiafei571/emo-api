@@ -1130,7 +1130,7 @@ Staging/Production MVP 在名义单实例阶段不创建 Redis，也不修改 Do
 - [x] 只有 `main` 分支上的 `VERSION` 文件发生变化才触发 production workflow；
 - [x] workflow 校验新版本严格大于旧版本，拒绝相同版本、降级和非 `MAJOR.MINOR.PATCH` 格式；
 - [x] GitHub Actions 使用现有 Workload Identity Federation provider `emo-api`，不保存 GCP service account key；
-- [ ] 为 `github-semo-api-deployer` 补充 `semo-api` Artifact Registry 仓库级 Writer；本机 `gcloud` 需要重新登录后执行；
+- [x] `github-semo-api-deployer` 已获得 `semo-api` Artifact Registry 仓库级 Writer；
 - [x] 镜像使用不可变版本 tag，并在部署时固定到 digest；
 - [x] 同一版本 workflow 重跑时复用 Artifact Registry 已有 digest；
 - [x] 发布顺序固定为：构建/复用镜像 → 更新并执行 migration Job → 更新 Cloud Run service → 验证最新 revision 为 100% 流量；
