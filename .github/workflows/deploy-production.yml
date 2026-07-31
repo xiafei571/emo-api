@@ -38,7 +38,9 @@ jobs:
       - name: Check out release commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          fetch-depth: 2
+          # A push may contain several commits. The version gate compares the
+          # release with github.event.before, which can be deeper than HEAD^.
+          fetch-depth: 0
 
       - name: Require a stable SemVer increase
         id: version
@@ -48,7 +50,10 @@ jobs:
           set -euo pipefail
 
           new_version="$(tr -d '[:space:]' < VERSION)"
-          old_version="$(git show "${BEFORE_SHA}:VERSION" | tr -d '[:space:]')"
+          old_version=""
+          if git cat-file -e "${BEFORE_SHA}:VERSION" 2>/dev/null; then
+            old_version="$(git show "${BEFORE_SHA}:VERSION" | tr -d '[:space:]')"
+          fi
 
           python3 - "$BEFORE_SHA" "$old_version" "$new_version" <<'PY'
           import re
