@@ -50,11 +50,12 @@ jobs:
           new_version="$(tr -d '[:space:]' < VERSION)"
           old_version="$(git show "${BEFORE_SHA}:VERSION" | tr -d '[:space:]')"
 
-          python3 - "$old_version" "$new_version" <<'PY'
+          python3 - "$BEFORE_SHA" "$old_version" "$new_version" <<'PY'
           import re
           import sys
 
-          old_version, new_version = sys.argv[1:3]
+          before_sha, old_version, new_version = sys.argv[1:4]
+          bootstrap_sha = "afe16c64cd73853da1eda3bf236f15d69637b4bf"
           pattern = re.compile(r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$")
 
           def parse(version: str) -> tuple[int, int, int]:
@@ -66,7 +67,14 @@ jobs:
               return tuple(int(part) for part in match.groups())
 
           new_value = parse(new_version)
-          if old_version == "afe16c64-semo.1":
+          if not old_version:
+              if before_sha != bootstrap_sha:
+                  raise ValueError(
+                      f"VERSION is empty at unexpected commit {before_sha}"
+                  )
+              old_value = (0, 0, 0)
+              print(f"Bootstrapping empty VERSION at {before_sha}.")
+          elif old_version == "afe16c64-semo.1":
               old_value = (0, 0, 0)
               print(f"Migrating legacy version {old_version} to SemVer.")
           else:
