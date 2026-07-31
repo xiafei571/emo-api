@@ -1031,6 +1031,9 @@ semo-api-prod-crypto-secret
   `sha256:b325e426f7d68025d5920e91d9f06750f4099da7b780cb55604f9f3445ac1b6a`；
 - [x] Cloud Run 使用的 `linux/amd64` manifest digest 为
   `sha256:bbc3b44db6c837740a2023bdf7e403078b88c098d3ac55f5c7eaf66773d7bb9e`；
+- [x] 共品牌 release commit `a6b5d9e249209ba478ef280bd28881ab0957bfa4` 由 Cloud Build
+  `ce6b4d41-2340-4666-8a64-40d807cb5a14` 构建并推送，digest 为
+  `sha256:b346ecd8ecae8f509d6e64099eb7775074fb8a3cc9623f51277b6a557ba71a7e`；
 - [ ] 扫描镜像；
 - [x] Cloud Run 和 migration Job 都引用同一 digest。
 
@@ -1077,7 +1080,7 @@ Migration:     RUN_MIGRATIONS=false
 - [x] 初始化前 `/api/setup` 的 `database_type` 为 `postgres`；
 - [x] service 日志明确显示 `database migration skipped`。
 - [x] service-level 与 revision-level 最大实例数均固定为 1；service-level 最小实例数为 1。
-- [x] 最新健康 revision 为 `semo-api-prod-00004-chx`，使用 production 专用 immutable 仓库。
+- [x] 最新健康 revision 为 `semo-api-prod-00005-x6n`，100% 流量，使用 production 专用 immutable 仓库。
 
 ### Step 8：受控初始化与功能验证
 
@@ -1095,7 +1098,7 @@ Migration:     RUN_MIGRATIONS=false
 - [x] Usage Logs 已复核两次请求：非流式 10/5 tokens、USD 0.000040；流式 11/6 tokens、USD 0.000048；总计 USD 0.000088，按 `gpt-5.6-luna` Standard USD 1/M input、USD 6/M output 正确计费；
   - [ ] prompt cache、客户端断线、上游失败退款与并发长流测试；
 - [ ] 未实现 `count_tokens` 时不得宣称支持 Claude Code。
-- [ ] 完成合规共品牌：客户主品牌使用 `EMO API` 和 emo-web 机器人 Logo；页脚、About、许可证与上游链接继续保留 New API / QuantumNous 归属。
+- [x] 完成合规共品牌：客户主品牌使用 `EMO API` 和 emo-web 机器人 Logo；浏览器标题、favicon、页眉与页脚主品牌均已实测生效；页脚、About、许可证与上游链接继续保留 New API / QuantumNous 归属。
 
 ### Step 9：配置正式入口
 
