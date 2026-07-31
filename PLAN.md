@@ -1093,14 +1093,16 @@ Migration:     RUN_MIGRATIONS=false
 
 ### Step 9：配置正式入口
 
-- [ ] 创建 Global External Application Load Balancer；
-- [ ] 创建 serverless NEG 指向 `semo-api-prod`；
-- [ ] 创建 Cloud Armor policy，先使用运维 IP allowlist；
-- [ ] Cloud Run ingress 改为 internal and cloud load balancing；
-- [ ] 禁用默认 `run.app` URL；
-- [ ] 配置 Google-managed certificate；
-- [ ] DNS 验证无误后把 `api.semo.one` 指向 LB；
-- [ ] 完成安全 smoke test 后才扩大 Cloud Armor allowlist。
+- [x] 创建 Global External Managed Application Load Balancer；
+- [x] 全局静态 IPv4 `136.69.1.49` 已绑定 HTTPS forwarding rule；
+- [x] 创建东京 serverless NEG `semo-api-prod-neg` 指向 `semo-api-prod`；
+- [x] 创建 Cloud Armor `semo-api-prod-armor`：仅允许运维 IP `167.103.10.171/32`，默认拒绝 403；
+- [x] Cloud Run ingress 改为 `internal-and-cloud-load-balancing`；
+- [x] 禁用默认 `run.app` URL，实测返回 404；
+- [x] Google-managed certificate `semo-api-prod-cert` 已为 `ACTIVE`；
+- [x] Cloudflare DNS-only A 记录 `api.semo.one → 136.69.1.49` 已生效；
+- [x] `https://api.semo.one/api/status` 返回 200，版本为 `afe16c64-semo.1`；
+- [ ] 扩大 Cloud Armor allowlist 前，先确定首批用户来源和公开访问策略。
 
 ### Step 10：Redis 延后
 
