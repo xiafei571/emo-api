@@ -20,13 +20,22 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 
 import { SystemSettings } from '@/features/system-settings'
 import { ROLE } from '@/lib/roles'
+import { resolveProtectedRouteAccess } from '@/lib/route-access'
 import { useAuthStore } from '@/stores/auth-store'
 
 export const Route = createFileRoute('/_authenticated/system-settings')({
-  beforeLoad: () => {
+  beforeLoad: ({ location }) => {
     const { auth } = useAuthStore.getState()
+    const access = resolveProtectedRouteAccess(auth, ROLE.SUPER_ADMIN)
 
-    if (auth.user?.role !== ROLE.SUPER_ADMIN) {
+    if (access === 'sign-in') {
+      throw redirect({
+        to: '/sign-in',
+        search: { redirect: location.href },
+      })
+    }
+
+    if (access === 'forbidden') {
       throw redirect({
         to: '/403',
       })
