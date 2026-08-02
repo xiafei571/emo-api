@@ -184,6 +184,7 @@ export async function telegramLogin(
 export async function register(payload: RegisterPayload): Promise<ApiResponse> {
   const res = await api.post(`/api/user/register`, payload, {
     params: { turnstile: payload.turnstile ?? '' },
+    skipBusinessError: true,
   })
   return res.data
 }
@@ -195,6 +196,7 @@ export async function sendEmailVerification(
 ): Promise<ApiResponse> {
   const res = await api.get('/api/verification', {
     params: { email, turnstile },
+    skipBusinessError: true,
   })
   return res.data
 }
