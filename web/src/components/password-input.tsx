@@ -50,6 +50,7 @@ export function PasswordInput({
       />
       <Button
         type='button'
+        tabIndex={-1}
         size='icon'
         variant='ghost'
         disabled={disabled}

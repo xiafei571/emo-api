@@ -50,6 +50,7 @@ import {
   getAffiliateCode,
   saveAffiliateCode,
 } from '@/features/auth/lib/storage'
+import { isValidEmail } from '@/features/auth/lib/validation'
 import { useStatus } from '@/hooks/use-status'
 import { isAuthBundle } from '@/lib/api'
 import { getServerErrorMessageKey } from '@/lib/server-error-message'
@@ -343,6 +344,7 @@ export function SignUpForm({
                 <Input
                   placeholder={t('Verification code')}
                   autoComplete='one-time-code'
+                  maxLength={6}
                   className='h-11 rounded-xl px-3.5 text-sm shadow-none'
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
@@ -355,7 +357,7 @@ export function SignUpForm({
                   isLoading ||
                   isSendingCode ||
                   isActive ||
-                  !emailValue ||
+                  !isValidEmail(emailValue || '') ||
                   !turnstileReady
                 }
                 onClick={handleSendVerificationCode}
@@ -392,6 +394,9 @@ export function SignUpForm({
           disabled={
             isLoading ||
             (requiresLegalConsent && !agreedToLegal) ||
+            (emailVerificationRequired &&
+              (!isValidEmail(emailValue || '') ||
+                verificationCode.trim().length !== 6)) ||
             !turnstileReady
           }
         >
