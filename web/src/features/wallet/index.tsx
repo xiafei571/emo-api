@@ -20,7 +20,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { SectionPageLayout } from '@/components/layout'
-import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { getSelf } from '@/lib/api'
 
@@ -32,7 +31,7 @@ import { TransferDialog } from './components/dialogs/transfer-dialog'
 import { RechargeFormCard } from './components/recharge-form-card'
 import { SubscriptionPlansCard } from './components/subscription-plans-card'
 import { WalletStatsCard } from './components/wallet-stats-card'
-import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from './constants'
+import { PAYMENT_TYPES } from './constants'
 import {
   useTopupInfo,
   usePayment,
@@ -52,7 +51,7 @@ import type {
   PaymentMethod,
   PresetAmount,
   CreemProduct,
-  WaffoPayMethod,
+  PaymentMethodOption,
 } from './types'
 
 interface WalletProps {
@@ -71,6 +70,8 @@ export function Wallet(props: WalletProps) {
     number | null
   >(null)
   const [paymentLoading, setPaymentLoading] = useState<string | null>(null)
+  const [selectedPaymentOptionValue, setSelectedPaymentOptionValue] =
+    useState<string>()
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false)
   const [transferDialogOpen, setTransferDialogOpen] = useState(false)
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
@@ -80,23 +81,18 @@ export function Wallet(props: WalletProps) {
     useState<CreemProduct | null>(null)
   const [showSubscriptionPanel, setShowSubscriptionPanel] = useState(true)
 
-  const { status } = useStatus()
   const { currency } = useSystemConfig()
   const { topupInfo, presetAmounts, loading: topupLoading } = useTopupInfo()
 
-  // Calculate effective exchange rate - when display type is USD, use rate of 1
-  const effectiveUsdExchangeRate = useMemo(() => {
-    return currency?.quotaDisplayType === 'USD'
-      ? 1
-      : currency?.usdExchangeRate || 1
-  }, [currency?.quotaDisplayType, currency?.usdExchangeRate])
-  const {
-    amount: paymentAmount,
-    calculating,
-    processing,
-    calculatePaymentAmount,
-    processPayment,
-  } = usePayment()
+  const currencyUnit = useMemo(() => {
+    if (currency?.quotaDisplayType === 'CNY') return 'CNY'
+    if (currency?.quotaDisplayType === 'CUSTOM') {
+      return currency.customCurrencySymbol?.trim() || 'USD'
+    }
+    return 'USD'
+  }, [currency?.customCurrencySymbol, currency?.quotaDisplayType])
+  const { calculating, processing, calculatePaymentAmount, processPayment } =
+    usePayment()
   const {
     affiliateLink,
     loading: affiliateLoading,
@@ -108,6 +104,109 @@ export function Wallet(props: WalletProps) {
   const { processing: waffoProcessing, processWaffoPayment } = useWaffoPayment()
   const { processing: pancakeProcessing, processWaffoPancakePayment } =
     useWaffoPancakePayment()
+
+  const paymentOptions = useMemo<PaymentMethodOption[]>(() => {
+    const configuredMethods = topupInfo?.pay_methods ?? []
+    const coreMethods = [
+      { type: PAYMENT_TYPES.ALIPAY, name: t('Alipay') },
+      { type: PAYMENT_TYPES.WECHAT, name: t('WeChat Pay') },
+      { type: PAYMENT_TYPES.STRIPE, name: 'Stripe' },
+    ]
+
+    const options: PaymentMethodOption[] = coreMethods.map(({ type, name }) => {
+      const configured = configuredMethods.find(
+        (method) => method.type === type
+      )
+      const gatewayEnabled =
+        type === PAYMENT_TYPES.STRIPE
+          ? Boolean(topupInfo?.enable_stripe_topup)
+          : Boolean(topupInfo?.enable_online_topup)
+      const gatewayMinimum =
+        type === PAYMENT_TYPES.STRIPE
+          ? topupInfo?.stripe_min_topup || 0
+          : topupInfo?.min_topup || 0
+      const minimum = Math.max(configured?.min_topup || 0, gatewayMinimum)
+      const meetsMinimum = topupAmount >= minimum
+      let disabledReason: string | undefined
+      if (!gatewayEnabled) {
+        disabledReason = t('Not configured')
+      } else if (!meetsMinimum) {
+        disabledReason = t('Minimum topup amount: {{amount}}', {
+          amount: minimum,
+        })
+      }
+
+      return {
+        value: type,
+        method: configured ?? { name, type },
+        enabled: gatewayEnabled && meetsMinimum,
+        disabledReason,
+      }
+    })
+
+    const coreTypes = new Set<string>(coreMethods.map(({ type }) => type))
+    configuredMethods
+      .filter((method) => !coreTypes.has(method.type))
+      .forEach((method) => {
+        const minimum = Math.max(
+          method.min_topup || 0,
+          topupInfo?.min_topup || 0
+        )
+        const meetsMinimum = topupAmount >= minimum
+        let disabledReason: string | undefined
+        if (!topupInfo?.enable_online_topup) {
+          disabledReason = t('Not configured')
+        } else if (!meetsMinimum) {
+          disabledReason = t('Minimum topup amount: {{amount}}', {
+            amount: minimum,
+          })
+        }
+        options.push({
+          value: method.type,
+          method,
+          enabled: Boolean(topupInfo?.enable_online_topup) && meetsMinimum,
+          disabledReason,
+        })
+      })
+
+    if (topupInfo?.enable_waffo_topup) {
+      const minimum = topupInfo.waffo_min_topup || 0
+      topupInfo.waffo_pay_methods?.forEach((method, index) => {
+        const meetsMinimum = topupAmount >= minimum
+        options.push({
+          value: `waffo:${index}`,
+          method: {
+            name: method.name,
+            type: PAYMENT_TYPES.WAFFO,
+            icon: method.icon,
+          },
+          enabled: meetsMinimum,
+          disabledReason: meetsMinimum
+            ? undefined
+            : t('Minimum topup amount: {{amount}}', { amount: minimum }),
+          waffoMethodIndex: index,
+        })
+      })
+    }
+
+    if (topupInfo?.enable_waffo_pancake_topup) {
+      const minimum = topupInfo.waffo_pancake_min_topup || 0
+      const meetsMinimum = topupAmount >= minimum
+      options.push({
+        value: PAYMENT_TYPES.WAFFO_PANCAKE,
+        method: {
+          name: 'Waffo Pancake',
+          type: PAYMENT_TYPES.WAFFO_PANCAKE,
+        },
+        enabled: meetsMinimum,
+        disabledReason: meetsMinimum
+          ? undefined
+          : t('Minimum topup amount: {{amount}}', { amount: minimum }),
+      })
+    }
+
+    return options
+  }, [t, topupAmount, topupInfo])
 
   // Fetch and refresh user data
   const fetchUser = useCallback(async () => {
@@ -169,25 +268,40 @@ export function Wallet(props: WalletProps) {
     calculatePaymentAmount(amount, getCurrentPaymentType())
   }
 
-  // Handle payment method selection
-  const handlePaymentMethodSelect = async (method: PaymentMethod) => {
-    setSelectedPaymentMethod(method)
-    setSelectedWaffoMethodIndex(null)
-    setPaymentLoading(method.type)
+  const selectPaymentOption = useCallback(
+    async (option: PaymentMethodOption) => {
+      if (!option.enabled) return false
 
-    try {
-      // Validate minimum topup
-      const minTopup = getMinTopupAmount(topupInfo)
-      if (topupAmount < minTopup) {
-        return
+      setSelectedPaymentOptionValue(option.value)
+      setSelectedPaymentMethod(option.method)
+      setSelectedWaffoMethodIndex(option.waffoMethodIndex ?? null)
+      setPaymentLoading(option.value)
+
+      try {
+        await calculatePaymentAmount(topupAmount, option.method.type)
+        return true
+      } finally {
+        setPaymentLoading(null)
       }
+    },
+    [calculatePaymentAmount, topupAmount]
+  )
 
-      // Calculate payment amount and show confirmation dialog
-      await calculatePaymentAmount(topupAmount, method.type)
-      setConfirmDialogOpen(true)
-    } finally {
-      setPaymentLoading(null)
-    }
+  const handleOpenRecharge = async () => {
+    const option =
+      paymentOptions.find(
+        (candidate) =>
+          candidate.value === selectedPaymentOptionValue && candidate.enabled
+      ) ?? paymentOptions.find((candidate) => candidate.enabled)
+    if (!option) return
+
+    const selected = await selectPaymentOption(option)
+    if (selected) setConfirmDialogOpen(true)
+  }
+
+  const handlePaymentMethodChange = async (value: string) => {
+    const option = paymentOptions.find((candidate) => candidate.value === value)
+    if (option) await selectPaymentOption(option)
   }
 
   // Handle payment confirmation
@@ -249,32 +363,6 @@ export function Wallet(props: WalletProps) {
     }
   }
 
-  const handleWaffoMethodSelect = async (
-    method: WaffoPayMethod,
-    index: number
-  ) => {
-    const loadingKey = `waffo-${index}`
-    setSelectedPaymentMethod({
-      name: method.name,
-      type: PAYMENT_TYPES.WAFFO,
-      icon: method.icon,
-    })
-    setSelectedWaffoMethodIndex(index)
-    setPaymentLoading(loadingKey)
-
-    try {
-      await calculatePaymentAmount(topupAmount, PAYMENT_TYPES.WAFFO)
-      setConfirmDialogOpen(true)
-    } finally {
-      setPaymentLoading(null)
-    }
-  }
-
-  // Get discount rate for current topup amount
-  const getDiscountRate = useCallback(() => {
-    return topupInfo?.discount?.[topupAmount] || DEFAULT_DISCOUNT_RATE
-  }, [topupInfo, topupAmount])
-
   const handleSubscriptionAvailabilityChange = useCallback(
     (available: boolean) => {
       setShowSubscriptionPanel(available)
@@ -305,29 +393,22 @@ export function Wallet(props: WalletProps) {
                   onSelectPreset={handleSelectPreset}
                   topupAmount={topupAmount}
                   onTopupAmountChange={handleTopupAmountChange}
-                  paymentAmount={paymentAmount}
-                  calculating={calculating}
-                  onPaymentMethodSelect={handlePaymentMethodSelect}
-                  paymentLoading={paymentLoading}
+                  currencyUnit={currencyUnit}
+                  onRecharge={handleOpenRecharge}
+                  rechargeDisabled={
+                    !paymentOptions.some((option) => option.enabled)
+                  }
+                  rechargeLoading={Boolean(paymentLoading)}
                   redemptionCode={redemptionCode}
                   onRedemptionCodeChange={setRedemptionCode}
                   onRedeem={handleRedeem}
                   redeeming={redeeming}
                   topupLink={topupInfo?.topup_link}
                   loading={topupLoading}
-                  priceRatio={(status?.price as number) || 1}
-                  usdExchangeRate={effectiveUsdExchangeRate}
                   onOpenBilling={() => setBillingDialogOpen(true)}
                   creemProducts={topupInfo?.creem_products}
                   enableCreemTopup={topupInfo?.enable_creem_topup}
                   onCreemProductSelect={handleCreemProductSelect}
-                  enableWaffoTopup={topupInfo?.enable_waffo_topup}
-                  waffoPayMethods={topupInfo?.waffo_pay_methods}
-                  waffoMinTopup={topupInfo?.waffo_min_topup}
-                  onWaffoMethodSelect={handleWaffoMethodSelect}
-                  enableWaffoPancakeTopup={
-                    topupInfo?.enable_waffo_pancake_topup
-                  }
                 />
               </div>
 
@@ -357,12 +438,12 @@ export function Wallet(props: WalletProps) {
         onOpenChange={setConfirmDialogOpen}
         onConfirm={handlePaymentConfirm}
         topupAmount={topupAmount}
-        paymentAmount={paymentAmount}
-        paymentMethod={selectedPaymentMethod}
+        currencyUnit={currencyUnit}
+        paymentOptions={paymentOptions}
+        selectedPaymentOptionValue={selectedPaymentOptionValue}
+        onPaymentMethodChange={handlePaymentMethodChange}
         calculating={calculating}
         processing={processing || waffoProcessing || pancakeProcessing}
-        discountRate={getDiscountRate()}
-        usdExchangeRate={effectiveUsdExchangeRate}
       />
 
       <TransferDialog

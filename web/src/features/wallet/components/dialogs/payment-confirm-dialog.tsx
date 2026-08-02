@@ -29,24 +29,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatLocalCurrencyAmount } from '@/lib/currency'
+import { formatNumber } from '@/lib/format'
 
-import { DEFAULT_DISCOUNT_RATE } from '../../constants'
-import { formatCurrency, getPaymentIcon } from '../../lib'
-import type { PaymentMethod } from '../../types'
+import type { PaymentMethodOption } from '../../types'
 
 interface PaymentConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
   topupAmount: number
-  paymentAmount: number
-  paymentMethod: PaymentMethod | undefined
+  currencyUnit: string
+  paymentOptions: PaymentMethodOption[]
+  selectedPaymentOptionValue?: string
+  onPaymentMethodChange: (value: string) => void
   calculating: boolean
   processing: boolean
-  discountRate?: number
-  usdExchangeRate?: number
 }
 
 export function PaymentConfirmDialog({
@@ -54,17 +53,17 @@ export function PaymentConfirmDialog({
   onOpenChange,
   onConfirm,
   topupAmount,
-  paymentAmount,
-  paymentMethod,
+  currencyUnit,
+  paymentOptions,
+  selectedPaymentOptionValue,
+  onPaymentMethodChange,
   calculating,
   processing,
-  discountRate = DEFAULT_DISCOUNT_RATE,
-  usdExchangeRate = 1,
 }: PaymentConfirmDialogProps) {
   const { t } = useTranslation()
-  const hasDiscount = discountRate > 0 && discountRate < 1 && paymentAmount > 0
-  const originalAmount = hasDiscount ? paymentAmount / discountRate : 0
-  const discountAmount = hasDiscount ? originalAmount - paymentAmount : 0
+  const selectedOption = paymentOptions.find(
+    (option) => option.value === selectedPaymentOptionValue
+  )
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -84,11 +83,7 @@ export function PaymentConfirmDialog({
               {t('Topup Amount')}
             </span>
             <span className='text-lg font-semibold'>
-              {formatLocalCurrencyAmount(topupAmount * usdExchangeRate, {
-                digitsLarge: 2,
-                digitsSmall: 2,
-                abbreviate: false,
-              })}
+              {formatNumber(topupAmount)} {currencyUnit}
             </span>
           </div>
 
@@ -101,42 +96,37 @@ export function PaymentConfirmDialog({
             ) : (
               <div className='flex items-baseline gap-2'>
                 <span className='text-2xl font-semibold'>
-                  {formatCurrency(paymentAmount)}
+                  {formatNumber(topupAmount)} {currencyUnit}
                 </span>
-                {hasDiscount && (
-                  <span className='text-muted-foreground text-sm line-through'>
-                    {formatCurrency(originalAmount)}
-                  </span>
-                )}
               </div>
             )}
           </div>
-
-          {hasDiscount && !calculating && (
-            <div className='bg-muted/50 rounded-lg p-3'>
-              <div className='flex items-center justify-between text-sm'>
-                <span className='text-muted-foreground'>{t('You save')}</span>
-                <span className='font-semibold text-green-600'>
-                  {formatCurrency(discountAmount)}
-                </span>
-              </div>
-            </div>
-          )}
 
           <div className='border-t pt-4'>
             <div className='flex items-center justify-between'>
               <span className='text-muted-foreground text-sm'>
                 {t('Payment Method')}
               </span>
-              <div className='flex items-center gap-2'>
-                {getPaymentIcon(
-                  paymentMethod?.type,
-                  'h-4 w-4',
-                  paymentMethod?.icon,
-                  paymentMethod?.name
-                )}
-                <span className='font-medium'>{paymentMethod?.name}</span>
-              </div>
+              <NativeSelect
+                value={selectedPaymentOptionValue ?? ''}
+                onChange={(event) => onPaymentMethodChange(event.target.value)}
+                disabled={processing || calculating}
+                className='w-52 max-w-[65%]'
+                aria-label={t('Payment Method')}
+              >
+                {paymentOptions.map((option) => (
+                  <NativeSelectOption
+                    key={option.value}
+                    value={option.value}
+                    disabled={!option.enabled}
+                  >
+                    {option.method.name}
+                    {!option.enabled
+                      ? ` — ${option.disabledReason ?? t('Not configured')}`
+                      : ''}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
             </div>
           </div>
         </div>
@@ -145,7 +135,10 @@ export function PaymentConfirmDialog({
           <AlertDialogCancel disabled={processing}>
             {t('Cancel')}
           </AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm} disabled={processing}>
+          <AlertDialogAction
+            onClick={onConfirm}
+            disabled={processing || calculating || !selectedOption?.enabled}
+          >
             {processing && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             {t('Confirm Payment')}
           </AlertDialogAction>

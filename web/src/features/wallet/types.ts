@@ -102,6 +102,19 @@ export interface PaymentMethod {
   icon?: string
 }
 
+export interface PaymentMethodOption {
+  /** Stable value used by the payment-method selector */
+  value: string
+  /** Payment method dispatched after confirmation */
+  method: PaymentMethod
+  /** Whether the configured gateway can currently process this payment */
+  enabled: boolean
+  /** Optional explanation shown beside disabled methods */
+  disabledReason?: string
+  /** Waffo method index required by its dedicated payment endpoint */
+  waffoMethodIndex?: number
+}
+
 /**
  * Waffo payment method configuration
  */
