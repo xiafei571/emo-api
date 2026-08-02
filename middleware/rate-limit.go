@@ -172,9 +172,8 @@ func GlobalAPIRateLimit() func(c *gin.Context) {
 }
 
 func CriticalRateLimit() func(c *gin.Context) {
-	if common.CriticalRateLimitEnable {
-		return rateLimitFactory(common.CriticalRateLimitNum, common.CriticalRateLimitDuration, "CT")
-	}
+	// Disabled until requests behind Cloud Run can be keyed by the real client
+	// IP instead of the shared internal proxy address.
 	return defNext
 }
 
