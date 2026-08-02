@@ -5227,6 +5227,156 @@
     "Zero retention": "Zero retention",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V4",
+    "apiGuide": {
+      "button": "Usage Guide",
+      "title": "API Usage Guide",
+      "backToKeys": "Back to API keys",
+      "tableOfContents": "On this page",
+      "heroTitle": "Connect your tools to EMO API",
+      "heroDescription": "Create an API key, choose a supported model, and follow the guide for your client. Keep your key private and use the exact base URL shown below.",
+      "nav": {
+        "quickStart": "Quick start",
+        "connection": "Connection details",
+        "codex": "Codex",
+        "claudeCode": "Claude Code",
+        "cherryStudio": "Cherry Studio",
+        "chatbox": "ChatBox",
+        "openWebUI": "Open WebUI",
+        "otherTools": "Other tools",
+        "billing": "Billing and quota",
+        "troubleshooting": "Troubleshooting",
+        "security": "Security"
+      },
+      "quickStart": {
+        "title": "Quick start",
+        "description": "Complete these four steps before configuring a client.",
+        "step1Title": "Create an API key",
+        "step1Body": "On the API keys page, create a key and copy it immediately. The full value may only be shown once.",
+        "step2Title": "Check your balance",
+        "step2Body": "Make sure the wallet or subscription has enough quota. API usage is deducted according to the selected model price.",
+        "step3Title": "Choose a model ID",
+        "step3Body": "Use an exact model ID available to your account. You can retrieve the list with the command in Connection details.",
+        "step4Title": "Configure and test",
+        "step4Body": "Enter the base URL and key in your client, then send a small test request before starting normal use."
+      },
+      "connection": {
+        "title": "Connection details",
+        "description": "OpenAI-compatible clients and Claude Code use different base URL forms.",
+        "openAIBase": "OpenAI-compatible base URL",
+        "claudeBase": "Claude Code base URL",
+        "auth": "Authentication header",
+        "model": "Model",
+        "modelValue": "An exact model ID enabled for your account",
+        "listModels": "List the models available to your API key:",
+        "testRequest": "Test the OpenAI Responses endpoint:"
+      },
+      "codex": {
+        "title": "Codex CLI",
+        "description": "Configure Codex to use the OpenAI-compatible Responses API.",
+        "step1Title": "Set the API key",
+        "step1Body": "Store the key in an environment variable instead of writing it into the config file.",
+        "step2Title": "Add a provider",
+        "step2Body": "Add the following to ~/.codex/config.toml and replace your-model-id with an available model.",
+        "step3Title": "Start Codex",
+        "step3Body": "Open a new terminal so the environment variable is available, then start Codex.",
+        "note": "Codex requires the Responses API. Keep wire_api set to responses and include /v1 in base_url."
+      },
+      "claudeCode": {
+        "title": "Claude Code",
+        "description": "Claude Code connects through the Anthropic Messages-compatible gateway.",
+        "step1Title": "Start with environment variables",
+        "step1Body": "Use the site root as ANTHROPIC_BASE_URL; do not append /v1. ANTHROPIC_AUTH_TOKEN contains your EMO API key.",
+        "step2Title": "Optional persistent settings",
+        "step2Body": "Put these non-secret settings in ~/.claude/settings.json. Keep the API key in your shell or a secret manager.",
+        "note": "Gateway model discovery requires Claude Code 2.1.129 or later. If discovery is unavailable, set ANTHROPIC_MODEL to an enabled Claude model ID."
+      },
+      "cherryStudio": {
+        "title": "Cherry Studio",
+        "description": "Use a custom OpenAI-compatible provider.",
+        "step1": "Open Settings → Model Providers and add a custom OpenAI provider.",
+        "step2": "Paste your EMO API key into API Key.",
+        "step3": "Set API Address to {{origin}}. Cherry Studio appends the request path automatically.",
+        "step4": "Add or fetch the exact model IDs available to your account.",
+        "step5": "Save, run the provider connection test, and select the model in a new chat."
+      },
+      "chatbox": {
+        "title": "ChatBox",
+        "description": "Add EMO API as a custom OpenAI-compatible provider.",
+        "step1": "Open Settings → Model Provider → Add.",
+        "step2": "Choose OpenAI API Compatible.",
+        "step3": "Set API Host to {{origin}} and API Path to /v1/chat/completions.",
+        "step4": "Paste your EMO API key and enter an available model ID.",
+        "step5": "Save and send a short message to verify the connection."
+      },
+      "openWebUI": {
+        "title": "Open WebUI",
+        "description": "Connect an existing Open WebUI installation to EMO API.",
+        "step1": "Open Admin Settings → Connections → OpenAI.",
+        "step2": "Set URL to {{openAIBaseUrl}}.",
+        "step3": "Paste your EMO API key and save the connection.",
+        "step4": "Refresh the model list, then choose a model in a new chat.",
+        "docker": "For a new single-user Docker installation, you can pass the connection when creating the container:"
+      },
+      "otherTools": {
+        "title": "Other compatible tools",
+        "description": "Most clients that support a custom OpenAI-compatible endpoint use the same three values.",
+        "card": "Select an OpenAI-compatible or custom provider, set the base URL to {{openAIBaseUrl}}, paste your key, and choose an available model ID."
+      },
+      "billing": {
+        "title": "Billing and quota",
+        "description": "EMO API deducts usage from your wallet or active subscription according to model pricing.",
+        "item1": "Input, output, cache, image, audio, and tool usage may be priced separately.",
+        "item2": "A request can fail when the wallet or subscription quota is insufficient, even if the key is valid.",
+        "item3": "Review usage and remaining quota in Wallet, and rotate keys from the API keys page."
+      },
+      "troubleshooting": {
+        "title": "Troubleshooting",
+        "description": "Use the status code and response message to locate common configuration problems.",
+        "error": "Error",
+        "cause": "Likely cause",
+        "solution": "What to do",
+        "401": {
+          "name": "401 Unauthorized",
+          "cause": "Missing, invalid, or revoked API key.",
+          "solution": "Copy the key again, remove extra spaces, and verify the Authorization header."
+        },
+        "403": {
+          "name": "403 Forbidden",
+          "cause": "IP policy, group, model, or account permission denied the request.",
+          "solution": "Check key restrictions, account group, allowed models, and current IP."
+        },
+        "404": {
+          "name": "404 Not Found",
+          "cause": "The base URL or API path is incorrect.",
+          "solution": "Use /v1 for OpenAI-compatible clients; use the site root for Claude Code."
+        },
+        "429": {
+          "name": "429 Too Many Requests",
+          "cause": "A platform, account, group, or upstream rate limit was reached.",
+          "solution": "Wait and retry with backoff; reduce concurrency or request a higher limit."
+        },
+        "model": {
+          "name": "Model unavailable",
+          "cause": "The model ID is misspelled or not enabled for your group.",
+          "solution": "Fetch /v1/models and copy an exact model ID."
+        },
+        "quota": {
+          "name": "Insufficient quota",
+          "cause": "Wallet or subscription quota is exhausted.",
+          "solution": "Top up, renew the subscription, or choose a lower-cost model."
+        }
+      },
+      "security": {
+        "title": "Security checklist",
+        "description": "Treat every API key like a password.",
+        "item1": "Never put a key in browser-side code, a public repository, screenshots, or chat messages.",
+        "item2": "Use environment variables or a secret manager for CLI and server applications.",
+        "item3": "Create separate keys for separate devices, apps, and teammates.",
+        "item4": "Set expiration, model, IP, or quota restrictions when appropriate.",
+        "item5": "Revoke and replace a key immediately if it may have been exposed.",
+        "finalNote": "EMO API staff will never ask you to send your full API key. Only paste it into a client you trust."
+      }
+    },
     "Zoom": "Zoom"
   }
 }

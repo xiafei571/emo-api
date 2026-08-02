@@ -5227,6 +5227,156 @@
     "Zero retention": "データ保持なし",
     "Zhipu": "Zhipu",
     "Zhipu V4": "Zhipu V 4",
+    "apiGuide": {
+      "button": "利用ガイド",
+      "title": "API 利用ガイド",
+      "backToKeys": "API キーに戻る",
+      "tableOfContents": "目次",
+      "heroTitle": "ツールを EMO API に接続",
+      "heroDescription": "API キーを作成し、利用可能なモデルを選び、クライアント別の手順で設定します。キーは秘密にし、以下の正確なベース URL を使用してください。",
+      "nav": {
+        "quickStart": "クイックスタート",
+        "connection": "接続情報",
+        "codex": "Codex",
+        "claudeCode": "Claude Code",
+        "cherryStudio": "Cherry Studio",
+        "chatbox": "ChatBox",
+        "openWebUI": "Open WebUI",
+        "otherTools": "その他のツール",
+        "billing": "請求とクォータ",
+        "troubleshooting": "トラブルシューティング",
+        "security": "セキュリティ"
+      },
+      "quickStart": {
+        "title": "クイックスタート",
+        "description": "クライアント設定前に次の4手順を完了します。",
+        "step1Title": "API キーを作成",
+        "step1Body": "API キーページでキーを作成し、すぐにコピーします。完全な値は一度しか表示されない場合があります。",
+        "step2Title": "残高を確認",
+        "step2Body": "ウォレットまたはサブスクリプションに十分なクォータがあることを確認します。使用量はモデル価格に従って差し引かれます。",
+        "step3Title": "モデル ID を選択",
+        "step3Body": "アカウントで利用可能な正確なモデル ID を使用します。接続情報のコマンドで一覧を取得できます。",
+        "step4Title": "設定してテスト",
+        "step4Body": "クライアントにベース URL とキーを入力し、通常利用前に小さなリクエストでテストします。"
+      },
+      "connection": {
+        "title": "接続情報",
+        "description": "OpenAI 互換クライアントと Claude Code ではベース URL の形式が異なります。",
+        "openAIBase": "OpenAI 互換ベース URL",
+        "claudeBase": "Claude Code ベース URL",
+        "auth": "認証ヘッダー",
+        "model": "モデル",
+        "modelValue": "アカウントで有効な正確なモデル ID",
+        "listModels": "API キーで利用可能なモデルを確認：",
+        "testRequest": "OpenAI Responses エンドポイントをテスト："
+      },
+      "codex": {
+        "title": "Codex CLI",
+        "description": "OpenAI 互換 Responses API を使うよう Codex を設定します。",
+        "step1Title": "API キーを設定",
+        "step1Body": "キーを設定ファイルに直接書かず、環境変数に保存します。",
+        "step2Title": "プロバイダーを追加",
+        "step2Body": "以下を ~/.codex/config.toml に追加し、your-model-id を利用可能なモデルに置き換えます。",
+        "step3Title": "Codex を起動",
+        "step3Body": "新しいターミナルを開いて環境変数を読み込み、Codex を起動します。",
+        "note": "Codex には Responses API が必要です。wire_api は responses、base_url には /v1 を含めます。"
+      },
+      "claudeCode": {
+        "title": "Claude Code",
+        "description": "Anthropic Messages 互換ゲートウェイ経由で接続します。",
+        "step1Title": "環境変数で起動",
+        "step1Body": "ANTHROPIC_BASE_URL はサイトのルートを使用し /v1 を付けません。ANTHROPIC_AUTH_TOKEN に EMO API キーを設定します。",
+        "step2Title": "任意の永続設定",
+        "step2Body": "機密でない設定を ~/.claude/settings.json に置き、キーはシェルまたはシークレット管理に保存します。",
+        "note": "ゲートウェイのモデル検出には Claude Code 2.1.129 以降が必要です。利用できない場合は ANTHROPIC_MODEL を設定してください。"
+      },
+      "cherryStudio": {
+        "title": "Cherry Studio",
+        "description": "カスタム OpenAI 互換プロバイダーを使用します。",
+        "step1": "設定 → モデルプロバイダーを開き、カスタム OpenAI プロバイダーを追加します。",
+        "step2": "API Key に EMO API キーを貼り付けます。",
+        "step3": "API Address を {{origin}} に設定します。リクエストパスは自動追加されます。",
+        "step4": "利用可能な正確なモデル ID を追加または取得します。",
+        "step5": "保存して接続テストを行い、新しいチャットでモデルを選択します。"
+      },
+      "chatbox": {
+        "title": "ChatBox",
+        "description": "EMO API をカスタム OpenAI 互換プロバイダーとして追加します。",
+        "step1": "設定 → Model Provider → Add を開きます。",
+        "step2": "OpenAI API Compatible を選択します。",
+        "step3": "API Host は {{origin}}、API Path は /v1/chat/completions にします。",
+        "step4": "EMO API キーと利用可能なモデル ID を入力します。",
+        "step5": "保存し、短いメッセージで接続を確認します。"
+      },
+      "openWebUI": {
+        "title": "Open WebUI",
+        "description": "既存の Open WebUI を EMO API に接続します。",
+        "step1": "Admin Settings → Connections → OpenAI を開きます。",
+        "step2": "URL を {{openAIBaseUrl}} に設定します。",
+        "step3": "EMO API キーを貼り付けて保存します。",
+        "step4": "モデル一覧を更新し、新しいチャットでモデルを選びます。",
+        "docker": "新しい単一ユーザー Docker 環境では、コンテナ作成時に接続を渡せます："
+      },
+      "otherTools": {
+        "title": "その他の互換ツール",
+        "description": "カスタム OpenAI 互換エンドポイント対応クライアントは同じ3項目を使用します。",
+        "card": "OpenAI 互換またはカスタムプロバイダーを選び、ベース URL を {{openAIBaseUrl}} にして、キーと利用可能なモデル ID を設定します。"
+      },
+      "billing": {
+        "title": "請求とクォータ",
+        "description": "モデル価格に従い、ウォレットまたは有効なサブスクリプションから使用量が差し引かれます。",
+        "item1": "入力、出力、キャッシュ、画像、音声、ツールは別々に課金される場合があります。",
+        "item2": "キーが有効でもクォータ不足ではリクエストが失敗します。",
+        "item3": "ウォレットで使用量を確認し、API キーページでキーをローテーションします。"
+      },
+      "troubleshooting": {
+        "title": "トラブルシューティング",
+        "description": "ステータスコードと応答メッセージから一般的な問題を確認します。",
+        "error": "エラー",
+        "cause": "主な原因",
+        "solution": "対処方法",
+        "401": {
+          "name": "401 Unauthorized",
+          "cause": "キーがない、無効、または失効しています。",
+          "solution": "キーを再コピーし、空白と Authorization ヘッダーを確認します。"
+        },
+        "403": {
+          "name": "403 Forbidden",
+          "cause": "IP、グループ、モデル、または権限により拒否されました。",
+          "solution": "キー制限、グループ、許可モデル、現在の IP を確認します。"
+        },
+        "404": {
+          "name": "404 Not Found",
+          "cause": "ベース URL または API パスが誤っています。",
+          "solution": "OpenAI 互換は /v1、Claude Code はサイトルートを使います。"
+        },
+        "429": {
+          "name": "429 Too Many Requests",
+          "cause": "プラットフォーム、アカウント、グループ、上流の制限です。",
+          "solution": "待機してバックオフ再試行し、同時実行数を減らします。"
+        },
+        "model": {
+          "name": "モデル利用不可",
+          "cause": "モデル ID が誤っているかグループで未有効です。",
+          "solution": "/v1/models から正確な ID をコピーします。"
+        },
+        "quota": {
+          "name": "クォータ不足",
+          "cause": "ウォレットまたはサブスクリプションを使い切りました。",
+          "solution": "チャージ、更新、または低コストモデルを選びます。"
+        }
+      },
+      "security": {
+        "title": "セキュリティチェック",
+        "description": "API キーはパスワードと同様に扱ってください。",
+        "item1": "ブラウザコード、公開リポジトリ、スクリーンショット、チャットにキーを載せないでください。",
+        "item2": "CLI とサーバーでは環境変数またはシークレット管理を使用します。",
+        "item3": "端末、アプリ、メンバーごとに別のキーを作成します。",
+        "item4": "必要に応じて有効期限、モデル、IP、クォータを制限します。",
+        "item5": "漏えいの可能性があれば直ちに失効・再発行します。",
+        "finalNote": "EMO API スタッフが完全な API キーの送信を求めることはありません。信頼できるクライアントだけに入力してください。"
+      }
+    },
     "Zoom": "ズーム"
   }
 }

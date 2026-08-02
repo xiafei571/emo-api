@@ -5227,6 +5227,156 @@
     "Zero retention": "零数据保留",
     "Zhipu": "智谱",
     "Zhipu V4": "智谱 V4",
+    "apiGuide": {
+      "button": "使用指南",
+      "title": "API 使用指南",
+      "backToKeys": "返回 API 密钥",
+      "tableOfContents": "本页目录",
+      "heroTitle": "将常用工具连接到 EMO API",
+      "heroDescription": "创建 API 密钥、选择可用模型，然后按照对应客户端的步骤完成配置。请妥善保管密钥，并使用下方准确的基础地址。",
+      "nav": {
+        "quickStart": "快速开始",
+        "connection": "连接参数",
+        "codex": "Codex",
+        "claudeCode": "Claude Code",
+        "cherryStudio": "Cherry Studio",
+        "chatbox": "ChatBox",
+        "openWebUI": "Open WebUI",
+        "otherTools": "其他工具",
+        "billing": "计费与额度",
+        "troubleshooting": "故障排查",
+        "security": "安全建议"
+      },
+      "quickStart": {
+        "title": "快速开始",
+        "description": "配置客户端前先完成以下四步。",
+        "step1Title": "创建 API 密钥",
+        "step1Body": "在 API 密钥页面创建并立即复制密钥。完整密钥可能只显示一次。",
+        "step2Title": "检查余额",
+        "step2Body": "确认钱包或订阅额度充足。API 使用量按所选模型价格扣除。",
+        "step3Title": "选择模型 ID",
+        "step3Body": "使用账户可用的准确模型 ID，可通过“连接参数”中的命令获取列表。",
+        "step4Title": "配置并测试",
+        "step4Body": "在客户端填写基础地址和密钥，先发送一个小请求测试，再正式使用。"
+      },
+      "connection": {
+        "title": "连接参数",
+        "description": "OpenAI 兼容客户端与 Claude Code 使用不同形式的基础地址。",
+        "openAIBase": "OpenAI 兼容基础地址",
+        "claudeBase": "Claude Code 基础地址",
+        "auth": "鉴权请求头",
+        "model": "模型",
+        "modelValue": "账户已启用的准确模型 ID",
+        "listModels": "查询此 API 密钥可用的模型：",
+        "testRequest": "测试 OpenAI Responses 接口："
+      },
+      "codex": {
+        "title": "Codex CLI",
+        "description": "配置 Codex 使用 OpenAI 兼容的 Responses API。",
+        "step1Title": "设置 API 密钥",
+        "step1Body": "将密钥保存到环境变量，不要直接写入配置文件。",
+        "step2Title": "添加服务商",
+        "step2Body": "把以下内容加入 ~/.codex/config.toml，并将 your-model-id 换成可用模型。",
+        "step3Title": "启动 Codex",
+        "step3Body": "打开新终端以加载环境变量，然后启动 Codex。",
+        "note": "Codex 需要 Responses API。wire_api 必须为 responses，base_url 必须包含 /v1。"
+      },
+      "claudeCode": {
+        "title": "Claude Code",
+        "description": "Claude Code 通过兼容 Anthropic Messages 的网关连接。",
+        "step1Title": "先用环境变量启动",
+        "step1Body": "ANTHROPIC_BASE_URL 使用网站根地址，不要加 /v1；ANTHROPIC_AUTH_TOKEN 填 EMO API 密钥。",
+        "step2Title": "可选的持久化配置",
+        "step2Body": "将非敏感设置放入 ~/.claude/settings.json，密钥仍保存在 Shell 或密钥管理器中。",
+        "note": "网关模型发现需要 Claude Code 2.1.129 或更高版本；不可用时请直接设置 ANTHROPIC_MODEL。"
+      },
+      "cherryStudio": {
+        "title": "Cherry Studio",
+        "description": "使用自定义 OpenAI 兼容服务商。",
+        "step1": "打开“设置 → 模型服务”，添加自定义 OpenAI 服务商。",
+        "step2": "在 API Key 中粘贴 EMO API 密钥。",
+        "step3": "API 地址填写 {{origin}}，Cherry Studio 会自动拼接请求路径。",
+        "step4": "添加或拉取账户可用的准确模型 ID。",
+        "step5": "保存并测试连接，然后在新对话中选择模型。"
+      },
+      "chatbox": {
+        "title": "ChatBox",
+        "description": "将 EMO API 添加为自定义 OpenAI 兼容服务商。",
+        "step1": "打开“设置 → 模型服务商 → 添加”。",
+        "step2": "选择 OpenAI API Compatible。",
+        "step3": "API Host 填 {{origin}}，API Path 填 /v1/chat/completions。",
+        "step4": "粘贴 EMO API 密钥并填写可用模型 ID。",
+        "step5": "保存后发送一条短消息验证连接。"
+      },
+      "openWebUI": {
+        "title": "Open WebUI",
+        "description": "把现有 Open WebUI 连接到 EMO API。",
+        "step1": "打开“管理员设置 → Connections → OpenAI”。",
+        "step2": "URL 填写 {{openAIBaseUrl}}。",
+        "step3": "粘贴 EMO API 密钥并保存连接。",
+        "step4": "刷新模型列表，在新对话中选择模型。",
+        "docker": "新建单用户 Docker 实例时，可在创建容器时传入连接配置："
+      },
+      "otherTools": {
+        "title": "其他兼容工具",
+        "description": "大多数支持自定义 OpenAI 兼容接口的客户端都使用相同的三个参数。",
+        "card": "选择 OpenAI 兼容或自定义服务商，基础地址填 {{openAIBaseUrl}}，粘贴密钥并选择可用模型 ID。"
+      },
+      "billing": {
+        "title": "计费与额度",
+        "description": "EMO API 按模型价格从钱包或有效订阅中扣除用量。",
+        "item1": "输入、输出、缓存、图片、音频和工具调用可能分别计费。",
+        "item2": "即使密钥有效，钱包或订阅额度不足时请求也会失败。",
+        "item3": "在钱包查看用量与剩余额度，在 API 密钥页面轮换密钥。"
+      },
+      "troubleshooting": {
+        "title": "故障排查",
+        "description": "根据状态码和响应消息定位常见配置问题。",
+        "error": "错误",
+        "cause": "可能原因",
+        "solution": "处理方法",
+        "401": {
+          "name": "401 未授权",
+          "cause": "密钥缺失、错误或已撤销。",
+          "solution": "重新复制密钥、去除空格并检查 Authorization 请求头。"
+        },
+        "403": {
+          "name": "403 禁止访问",
+          "cause": "IP 策略、分组、模型或账户权限拒绝请求。",
+          "solution": "检查密钥限制、账户分组、允许模型和当前 IP。"
+        },
+        "404": {
+          "name": "404 未找到",
+          "cause": "基础地址或 API 路径错误。",
+          "solution": "OpenAI 兼容客户端使用 /v1；Claude Code 使用网站根地址。"
+        },
+        "429": {
+          "name": "429 请求过多",
+          "cause": "触发平台、账户、分组或上游限速。",
+          "solution": "等待后退避重试，降低并发或申请更高限额。"
+        },
+        "model": {
+          "name": "模型不可用",
+          "cause": "模型 ID 拼写错误或分组未启用。",
+          "solution": "请求 /v1/models 并复制准确模型 ID。"
+        },
+        "quota": {
+          "name": "额度不足",
+          "cause": "钱包或订阅额度已用尽。",
+          "solution": "充值、续订或选择成本更低的模型。"
+        }
+      },
+      "security": {
+        "title": "安全检查清单",
+        "description": "把每个 API 密钥当作密码保护。",
+        "item1": "不要把密钥放在浏览器前端代码、公开仓库、截图或聊天消息中。",
+        "item2": "CLI 和服务端程序应使用环境变量或密钥管理器。",
+        "item3": "不同设备、应用和成员分别创建密钥。",
+        "item4": "按需要设置有效期、模型、IP 或额度限制。",
+        "item5": "怀疑泄露时立即撤销并更换密钥。",
+        "finalNote": "EMO API 工作人员不会要求你发送完整 API 密钥。只在可信客户端中粘贴密钥。"
+      }
+    },
     "Zoom": "缩放"
   }
 }
