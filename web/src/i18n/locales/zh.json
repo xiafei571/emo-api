@@ -5251,7 +5251,7 @@
         "title": "快速开始",
         "description": "配置客户端前先完成以下四步。",
         "step1Title": "创建 API 密钥",
-        "step1Body": "在 API 密钥页面创建并立即复制密钥。完整密钥可能只显示一次。",
+        "step1Body": "在 API 密钥页面创建并立即复制密钥，然后先在当前终端导出密钥，再执行下方命令。完整密钥可能只显示一次。",
         "step2Title": "检查余额",
         "step2Body": "确认钱包或订阅额度充足。API 使用量按所选模型价格扣除。",
         "step3Title": "选择模型 ID",
@@ -5276,10 +5276,10 @@
         "step1Title": "设置 API 密钥",
         "step1Body": "将密钥保存到环境变量，不要直接写入配置文件。",
         "step2Title": "添加服务商",
-        "step2Body": "把以下内容加入 ~/.codex/config.toml，并将 your-model-id 换成可用模型。",
+        "step2Body": "把以下服务商配置加入 ~/.codex/config.toml，并且只添加一次 [model_providers.emo]。不要设置顶层 model_provider，这样普通启动仍使用原有服务商。",
         "step3Title": "启动 Codex",
-        "step3Body": "打开新终端以加载环境变量，然后启动 Codex。",
-        "note": "Codex 需要 Responses API。wire_api 必须为 responses，base_url 必须包含 /v1。"
+        "step3Body": "在刚才导出 EMO_API_KEY 的同一个终端用以下命令按需启动 EMO。示例模型可替换为 /v1/models 返回的准确 ID。临时导出的变量不会自动进入新终端。",
+        "note": "该命令只为本次启动选择 EMO；普通 codex 命令仍使用原有服务商。Codex 需要 Responses API，因此 wire_api 必须为 responses，base_url 必须包含 /v1。"
       },
       "claudeCode": {
         "title": "Claude Code",
@@ -5338,7 +5338,7 @@
         "401": {
           "name": "401 未授权",
           "cause": "密钥缺失、错误或已撤销。",
-          "solution": "重新复制密钥、去除空格并检查 Authorization 请求头。"
+          "solution": "先运行 echo ${#EMO_API_KEY}；结果为 0 表示变量为空。请在同一终端重新导出密钥、去除空格并检查 Authorization 请求头。"
         },
         "403": {
           "name": "403 禁止访问",

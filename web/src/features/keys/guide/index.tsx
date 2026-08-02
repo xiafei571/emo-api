@@ -159,30 +159,31 @@ export function ApiUsageGuide() {
   const { t } = useTranslation()
   const origin = window.location.origin
   const openAIBaseUrl = `${origin}/v1`
-  const codexConfig = `model = "your-model-id"
-model_provider = "emo"
-
-[model_providers.emo]
+  const setApiKey = 'export EMO_API_KEY="your-emo-api-key"'
+  const codexConfig = `[model_providers.emo]
 name = "EMO API"
 base_url = "${openAIBaseUrl}"
 wire_api = "responses"
 env_key = "EMO_API_KEY"`
+  const codexCommand = `codex --config model_provider='"emo"' --model gpt-5.6-terra`
   const claudeSettings = `{
   "env": {
     "ANTHROPIC_BASE_URL": "${origin}",
-    "ANTHROPIC_MODEL": "claude-sonnet-4-6",
+    "ANTHROPIC_MODEL": "claude-opus-4-6",
     "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "1"
   }
 }`
-  const curlModels = `curl "${openAIBaseUrl}/models" \\
-  -H "Authorization: Bearer $EMO_API_KEY"`
-  const curlResponses = `curl "${openAIBaseUrl}/responses" \\
+  const curlModels = `curl -sS "${openAIBaseUrl}/models" \\
+  -H "Authorization: Bearer $EMO_API_KEY"
+echo`
+  const curlResponses = `curl -sS "${openAIBaseUrl}/responses" \\
   -H "Authorization: Bearer $EMO_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "model": "your-model-id",
+    "model": "gpt-5.6-terra",
     "input": "Hello from EMO API"
-  }'`
+  }'
+echo`
   const openWebUiDocker = `docker run -d -p 3000:8080 \\
   -e OPENAI_API_BASE_URL="${openAIBaseUrl}" \\
   -e OPENAI_API_KEY="your-emo-api-key" \\
@@ -251,6 +252,7 @@ env_key = "EMO_API_KEY"`
               >
                 {t('apiGuide.quickStart.step1Body')}
               </NumberedStep>
+              <GuideCodeBlock code={setApiKey} language='bash' />
               <NumberedStep
                 number={2}
                 title={t('apiGuide.quickStart.step2Title')}
@@ -287,7 +289,7 @@ env_key = "EMO_API_KEY"`
                 />
                 <SettingRow
                   label={t('apiGuide.connection.auth')}
-                  value='Authorization: Bearer sk-...'
+                  value='Authorization: Bearer <your-emo-api-key>'
                 />
                 <SettingRow
                   label={t('apiGuide.connection.model')}
@@ -312,10 +314,7 @@ env_key = "EMO_API_KEY"`
               <NumberedStep number={1} title={t('apiGuide.codex.step1Title')}>
                 {t('apiGuide.codex.step1Body')}
               </NumberedStep>
-              <GuideCodeBlock
-                code='export EMO_API_KEY="your-emo-api-key"'
-                language='bash'
-              />
+              <GuideCodeBlock code={setApiKey} language='bash' />
               <NumberedStep number={2} title={t('apiGuide.codex.step2Title')}>
                 {t('apiGuide.codex.step2Body')}
               </NumberedStep>
@@ -323,7 +322,7 @@ env_key = "EMO_API_KEY"`
               <NumberedStep number={3} title={t('apiGuide.codex.step3Title')}>
                 {t('apiGuide.codex.step3Body')}
               </NumberedStep>
-              <GuideCodeBlock code='codex' language='bash' />
+              <GuideCodeBlock code={codexCommand} language='bash' />
               <div className='rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'>
                 {t('apiGuide.codex.note')}
               </div>
@@ -343,7 +342,8 @@ env_key = "EMO_API_KEY"`
               <GuideCodeBlock
                 code={`export ANTHROPIC_BASE_URL="${origin}"
 export ANTHROPIC_AUTH_TOKEN="your-emo-api-key"
-export ANTHROPIC_MODEL="claude-sonnet-4-6"
+export ANTHROPIC_MODEL="claude-opus-4-6"
+export CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY=1
 claude`}
                 language='bash'
               />

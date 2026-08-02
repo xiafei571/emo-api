@@ -5251,7 +5251,7 @@
         "title": "クイックスタート",
         "description": "クライアント設定前に次の4手順を完了します。",
         "step1Title": "API キーを作成",
-        "step1Body": "API キーページでキーを作成し、すぐにコピーします。完全な値は一度しか表示されない場合があります。",
+        "step1Body": "API キーページでキーを作成してすぐにコピーし、以下のコマンドを実行する前に同じターミナルでエクスポートします。完全な値は一度しか表示されない場合があります。",
         "step2Title": "残高を確認",
         "step2Body": "ウォレットまたはサブスクリプションに十分なクォータがあることを確認します。使用量はモデル価格に従って差し引かれます。",
         "step3Title": "モデル ID を選択",
@@ -5276,10 +5276,10 @@
         "step1Title": "API キーを設定",
         "step1Body": "キーを設定ファイルに直接書かず、環境変数に保存します。",
         "step2Title": "プロバイダーを追加",
-        "step2Body": "以下を ~/.codex/config.toml に追加し、your-model-id を利用可能なモデルに置き換えます。",
+        "step2Body": "以下のプロバイダー設定を ~/.codex/config.toml に追加し、[model_providers.emo] は一度だけ定義してください。通常起動で既存のプロバイダーを使い続けるため、トップレベルの model_provider は設定しません。",
         "step3Title": "Codex を起動",
-        "step3Body": "新しいターミナルを開いて環境変数を読み込み、Codex を起動します。",
-        "note": "Codex には Responses API が必要です。wire_api は responses、base_url には /v1 を含めます。"
+        "step3Body": "EMO_API_KEY をエクスポートした同じターミナルで以下のコマンドを実行し、必要なときだけ EMO を使います。例のモデルは /v1/models が返す正確な ID に変更できます。一時的なエクスポートは新しいターミナルには引き継がれません。",
+        "note": "このコマンドは今回の起動だけ EMO を選択し、通常の codex コマンドは既存のプロバイダーを使います。Codex には Responses API が必要なため、wire_api は responses、base_url には /v1 を含めてください。"
       },
       "claudeCode": {
         "title": "Claude Code",
@@ -5338,7 +5338,7 @@
         "401": {
           "name": "401 Unauthorized",
           "cause": "キーがない、無効、または失効しています。",
-          "solution": "キーを再コピーし、空白と Authorization ヘッダーを確認します。"
+          "solution": "まず echo ${#EMO_API_KEY} を実行します。0 の場合は変数が空です。同じターミナルでキーを再設定し、余分な空白と Authorization ヘッダーを確認します。"
         },
         "403": {
           "name": "403 Forbidden",

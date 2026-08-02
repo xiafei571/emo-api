@@ -5251,7 +5251,7 @@
         "title": "Quick start",
         "description": "Complete these four steps before configuring a client.",
         "step1Title": "Create an API key",
-        "step1Body": "On the API keys page, create a key and copy it immediately. The full value may only be shown once.",
+        "step1Body": "On the API keys page, create a key and copy it immediately. Then export it in the same terminal before running any command below. The full value may only be shown once.",
         "step2Title": "Check your balance",
         "step2Body": "Make sure the wallet or subscription has enough quota. API usage is deducted according to the selected model price.",
         "step3Title": "Choose a model ID",
@@ -5276,10 +5276,10 @@
         "step1Title": "Set the API key",
         "step1Body": "Store the key in an environment variable instead of writing it into the config file.",
         "step2Title": "Add a provider",
-        "step2Body": "Add the following to ~/.codex/config.toml and replace your-model-id with an available model.",
+        "step2Body": "Add the provider configuration below to ~/.codex/config.toml, with [model_providers.emo] appearing only once. Do not set a top-level model_provider, so normal launches keep using your existing provider.",
         "step3Title": "Start Codex",
-        "step3Body": "Open a new terminal so the environment variable is available, then start Codex.",
-        "note": "Codex requires the Responses API. Keep wire_api set to responses and include /v1 in base_url."
+        "step3Body": "Run the command below in the same terminal where you exported EMO_API_KEY to use EMO on demand. Replace the example model with another exact ID returned by /v1/models if needed. A new terminal will not inherit a temporary export.",
+        "note": "This command selects EMO for this launch only; the regular codex command keeps using your existing provider. Codex requires the Responses API, so keep wire_api set to responses and include /v1 in base_url."
       },
       "claudeCode": {
         "title": "Claude Code",
@@ -5338,7 +5338,7 @@
         "401": {
           "name": "401 Unauthorized",
           "cause": "Missing, invalid, or revoked API key.",
-          "solution": "Copy the key again, remove extra spaces, and verify the Authorization header."
+          "solution": "Run echo ${#EMO_API_KEY}; 0 means the variable is empty. Export the key in the same terminal, remove extra spaces, and verify the Authorization header."
         },
         "403": {
           "name": "403 Forbidden",
