@@ -42,4 +42,14 @@ describe('authentication page layout', () => {
     assert.ok(contentClasses.includes('p-5'))
     assert.ok(contentClasses.includes('sm:p-8'))
   })
+
+  test('prevents authentication content from widening beyond the viewport', () => {
+    const shellClasses = authLayoutClasses.shell.split(' ')
+    const contentClasses = authLayoutClasses.content.split(' ')
+
+    assert.ok(shellClasses.includes('min-w-0'))
+    assert.ok(contentClasses.includes('min-w-0'))
+    assert.ok(contentClasses.includes('max-w-full'))
+    assert.ok(contentClasses.includes('overflow-hidden'))
+  })
 })

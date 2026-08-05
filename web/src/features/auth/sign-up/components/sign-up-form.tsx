@@ -240,7 +240,7 @@ export function SignUpForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-4', className)}
+        className={cn('grid w-full min-w-0 max-w-full gap-4', className)}
         {...props}
       >
         {oauthRegisterEnabled && (
@@ -263,7 +263,7 @@ export function SignUpForm({
                 <Input
                   placeholder={t('Enter your username')}
                   autoComplete='username'
-                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                  className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                   {...field}
                 />
               </FormControl>
@@ -283,7 +283,7 @@ export function SignUpForm({
                 <PasswordInput
                   placeholder={t('Enter password (8-20 characters)')}
                   autoComplete='new-password'
-                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                  className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                   {...field}
                 />
               </FormControl>
@@ -303,7 +303,7 @@ export function SignUpForm({
                 <PasswordInput
                   placeholder={t('Confirm password')}
                   autoComplete='new-password'
-                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                  className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                   {...field}
                 />
               </FormControl>
@@ -329,7 +329,7 @@ export function SignUpForm({
                       placeholder={t('name@example.com')}
                       type='email'
                       autoComplete='email'
-                      className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                      className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                       {...field}
                     />
                   </FormControl>
@@ -345,7 +345,7 @@ export function SignUpForm({
                   placeholder={t('Verification code')}
                   autoComplete='one-time-code'
                   maxLength={6}
-                  className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                  className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                   value={verificationCode}
                   onChange={(e) => setVerificationCode(e.target.value)}
                 />

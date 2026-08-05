@@ -340,7 +340,7 @@ export function UserAuthForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className={cn('grid gap-4', className)}
+        className={cn('grid w-full min-w-0 max-w-full gap-4', className)}
         {...props}
       >
         {hasAlternativeLogin && alternativeLoginMethods}
@@ -358,7 +358,7 @@ export function UserAuthForm({
                     <Input
                       placeholder={t('Enter your username or email')}
                       autoComplete='username'
-                      className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                      className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                       {...field}
                     />
                   </FormControl>
@@ -378,7 +378,7 @@ export function UserAuthForm({
                     <PasswordInput
                       placeholder={t('Enter password')}
                       autoComplete='current-password'
-                      className='h-11 rounded-xl px-3.5 text-sm shadow-none'
+                      className='h-11 max-w-full rounded-xl px-3.5 text-base shadow-none sm:text-sm'
                       {...field}
                     />
                   </FormControl>

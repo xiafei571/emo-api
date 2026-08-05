@@ -16,10 +16,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-export const authLayoutClasses = {
-  page: 'relative min-h-svh overflow-y-auto bg-background',
-  shell:
-    'relative z-10 mx-auto flex min-h-svh w-full max-w-[440px] min-w-0 flex-col px-4 py-6 sm:px-6 sm:py-9',
-  content:
-    'w-full min-w-0 max-w-full overflow-hidden rounded-3xl border border-border/60 bg-background/95 p-5 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.42)] backdrop-blur-sm sm:p-8',
-} as const
+import assert from 'node:assert/strict'
+import { describe, test } from 'node:test'
+
+import { oauthProviderLayoutClasses } from '../../lib/oauth-provider-layout.ts'
+
+describe('OAuth provider button layout', () => {
+  test('long provider status text cannot widen the authentication form', () => {
+    const buttonClasses = oauthProviderLayoutClasses.button.split(' ')
+    const labelClasses = oauthProviderLayoutClasses.label.split(' ')
+
+    assert.ok(buttonClasses.includes('w-full'))
+    assert.ok(buttonClasses.includes('min-w-0'))
+    assert.ok(buttonClasses.includes('overflow-hidden'))
+    assert.ok(labelClasses.includes('min-w-0'))
+    assert.ok(labelClasses.includes('truncate'))
+  })
+})

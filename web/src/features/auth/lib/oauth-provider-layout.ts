@@ -16,10 +16,9 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-export const authLayoutClasses = {
-  page: 'relative min-h-svh overflow-y-auto bg-background',
-  shell:
-    'relative z-10 mx-auto flex min-h-svh w-full max-w-[440px] min-w-0 flex-col px-4 py-6 sm:px-6 sm:py-9',
-  content:
-    'w-full min-w-0 max-w-full overflow-hidden rounded-3xl border border-border/60 bg-background/95 p-5 shadow-[0_24px_70px_-46px_rgba(15,23,42,0.42)] backdrop-blur-sm sm:p-8',
+export const oauthProviderLayoutClasses = {
+  button:
+    'h-12 w-full min-w-0 justify-center gap-2 overflow-hidden rounded-xl px-3 text-sm shadow-none sm:text-base',
+  icon: 'shrink-0',
+  label: 'min-w-0 truncate',
 } as const

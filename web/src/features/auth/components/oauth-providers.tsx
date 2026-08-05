@@ -30,6 +30,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 import { useOAuthLogin } from '../hooks/use-oauth-login'
+import { oauthProviderLayoutClasses } from '../lib/oauth-provider-layout'
 import type { SystemStatus } from '../types'
 import { TelegramLoginDialog } from './telegram-login-dialog'
 
@@ -169,10 +170,16 @@ export function OAuthProviders({
                 type='button'
                 disabled={disabled || isLoading || extraDisabled}
                 onClick={onClick}
-                className='h-12 w-full justify-center gap-2 rounded-xl text-base shadow-none'
+                className={oauthProviderLayoutClasses.button}
               >
-                {icon}
-                {label}
+                {icon && (
+                  <span className={oauthProviderLayoutClasses.icon}>
+                    {icon}
+                  </span>
+                )}
+                <span className={oauthProviderLayoutClasses.label}>
+                  {label}
+                </span>
               </Button>
             )
           )}
