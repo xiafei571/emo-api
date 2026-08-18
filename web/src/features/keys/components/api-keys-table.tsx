@@ -24,7 +24,6 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
-import { CopyButton } from '@/components/copy-button'
 import {
   DISABLED_ROW_DESKTOP,
   DISABLED_ROW_MOBILE,
@@ -69,29 +68,6 @@ const API_KEYS_MOBILE_SKELETON_IDS = Array.from(
 
 function isDisabledApiKeyRow(apiKey: ApiKey) {
   return apiKey.status !== API_KEY_STATUS.ENABLED
-}
-
-function ApiBaseUrlToolbarAction() {
-  const { t } = useTranslation()
-  const apiBaseUrl = window.location.origin
-
-  return (
-    <div className='flex max-w-full min-w-0 items-center gap-1 rounded-md border px-1.5 py-1'>
-      <span className='text-muted-foreground shrink-0 text-xs'>
-        {t('API Base URL')}
-      </span>
-      <span className='min-w-0 truncate font-mono text-xs' title={apiBaseUrl}>
-        {apiBaseUrl}
-      </span>
-      <CopyButton
-        value={apiBaseUrl}
-        size='icon'
-        className='size-7'
-        tooltip={t('Copy API Base URL')}
-        successTooltip={t('Copied!')}
-      />
-    </div>
-  )
 }
 
 function ApiKeysMobileSkeleton() {
@@ -348,7 +324,6 @@ export function ApiKeysTable() {
             singleSelect: true,
           },
         ],
-        preActions: <ApiBaseUrlToolbarAction />,
       }}
       mobile={<ApiKeysMobileList table={table} isLoading={isLoading} />}
       getRowClassName={(row) =>

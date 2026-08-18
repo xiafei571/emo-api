@@ -20,6 +20,7 @@ import { Link } from '@tanstack/react-router'
 import { BookOpen, Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { CopyButton } from '@/components/copy-button'
 import { Button } from '@/components/ui/button'
 
 import { useApiKeys } from './api-keys-provider'
@@ -27,8 +28,26 @@ import { useApiKeys } from './api-keys-provider'
 export function ApiKeysPrimaryButtons() {
   const { t } = useTranslation()
   const { setOpen } = useApiKeys()
+  const apiBaseUrl = window.location.origin
+
   return (
-    <div className='flex gap-2'>
+    <div className='flex flex-wrap items-center justify-end gap-2'>
+      <div className='bg-muted/30 flex max-w-full min-w-0 items-center gap-2 rounded-lg border px-3 py-1.5'>
+        <span className='text-muted-foreground shrink-0 text-xs font-medium'>
+          {t('API Base URL')}
+        </span>
+        <span className='bg-border h-4 w-px shrink-0' />
+        <code className='min-w-0 truncate font-mono text-sm' title={apiBaseUrl}>
+          {apiBaseUrl}
+        </code>
+        <CopyButton
+          value={apiBaseUrl}
+          size='icon'
+          className='size-7'
+          tooltip={t('Copy API Base URL')}
+          successTooltip={t('Copied!')}
+        />
+      </div>
       <Button
         size='sm'
         className='border-amber-300 bg-amber-100 text-amber-950 hover:bg-amber-200 dark:border-amber-700 dark:bg-amber-950/60 dark:text-amber-100 dark:hover:bg-amber-900/70'
