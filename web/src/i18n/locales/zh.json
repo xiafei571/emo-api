@@ -374,6 +374,7 @@
     "API Addresses": "API 地址",
     "API Base URL (Important: Not Chat API) *": "API 基础 URL (重要：非聊天 API) *",
     "API Base URL *": "API 基础 URL *",
+    "Copy API Base URL": "复制 API 基础 URL",
     "API Endpoints": "API 端点",
     "API Info": "API 信息",
     "API info added. Click \"Save Settings\" to apply.": "API 信息已添加。点击 \"保存设置\" 以应用。",
@@ -5237,12 +5238,14 @@
       "heroDescription": "创建 API 密钥、选择可用模型，然后按照对应客户端的步骤完成配置。请妥善保管密钥，并使用下方准确的基础地址。",
       "nav": {
         "quickStart": "快速开始",
+        "environment": "环境准备",
         "connection": "连接参数",
         "codex": "Codex",
         "claudeCode": "Claude Code",
         "cherryStudio": "Cherry Studio",
         "chatbox": "ChatBox",
         "openWebUI": "Open WebUI",
+        "openCode": "OpenCode / OpenClaw",
         "otherTools": "其他工具",
         "billing": "计费与额度",
         "troubleshooting": "故障排查",
@@ -5259,6 +5262,20 @@
         "step3Body": "使用账户可用的准确模型 ID，可通过“连接参数”中的命令获取列表。",
         "step4Title": "配置并测试",
         "step4Body": "在客户端填写基础地址和密钥，先发送一个小请求测试，再正式使用。"
+      },
+      "environment": {
+        "title": "环境准备与安装",
+        "description": "Claude Code、Codex 和 OpenCode 都需要 Node.js；Windows 用户建议同时安装 Git。先确认命令能在终端中运行。",
+        "windowsTitle": "Windows",
+        "windowsBody": "安装 Node.js LTS 和 Git，打开 PowerShell 验证版本。",
+        "macosTitle": "macOS",
+        "macosBody": "安装 Node.js LTS 和 Git；可从 nodejs.org 下载，或使用已有包管理器。",
+        "linuxTitle": "Linux",
+        "linuxBody": "Ubuntu/Debian 可执行以下命令；其他发行版请使用对应包管理器。",
+        "claudeInstallTitle": "安装 Claude Code",
+        "claudeInstallBody": "在 PowerShell、Terminal 或 Linux shell 中执行，显示版本号即安装成功。",
+        "editorTitle": "VS Code / Cursor / Trae",
+        "editorBody": "先按下方 Claude Code 或 Codex 步骤在终端完成配置，再在编辑器扩展市场安装对应插件。插件通常会读取终端中的配置，不要把 API 密钥提交到项目文件。"
       },
       "connection": {
         "title": "连接参数",
@@ -5317,6 +5334,15 @@
         "step3": "粘贴 EMO API 密钥并保存连接。",
         "step4": "刷新模型列表，在新对话中选择模型。",
         "docker": "新建单用户 Docker 实例时，可在创建容器时传入连接配置："
+      },
+      "openCode": {
+        "title": "OpenCode / OpenClaw",
+        "description": "这类工具可通过 OpenAI 兼容接口连接 EMO API。请先确认工具版本支持自定义 provider。",
+        "step1Title": "启动 OpenCode",
+        "step1Body": "安装 OpenCode 后，在终端导出 API 密钥并启动。首次使用时按客户端提示选择自定义 provider。",
+        "step2Title": "配置 OpenClaw 或其他 provider",
+        "step2Body": "将 provider 的 base URL 设置为 {{openAIBaseUrl}}，API key 填入 EMO API 密钥，models 中填写 /v1/models 返回的准确模型 ID。",
+        "note": "OpenCode、OpenClaw 的配置文件格式会随版本变化；如果字段名称不同，以当前版本文档为准。不要把真实 API 密钥提交到公开仓库。"
       },
       "otherTools": {
         "title": "其他兼容工具",

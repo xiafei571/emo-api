@@ -43,12 +43,14 @@ import { GuideCodeBlock } from './components/guide-code-block'
 
 const GUIDE_SECTIONS = [
   { id: 'quick-start', labelKey: 'apiGuide.nav.quickStart', icon: KeyRound },
+  { id: 'environment', labelKey: 'apiGuide.nav.environment', icon: Laptop },
   { id: 'connection', labelKey: 'apiGuide.nav.connection', icon: Server },
   { id: 'codex', labelKey: 'apiGuide.nav.codex', icon: TerminalSquare },
   { id: 'claude-code', labelKey: 'apiGuide.nav.claudeCode', icon: Code2 },
   { id: 'cherry-studio', labelKey: 'apiGuide.nav.cherryStudio', icon: Bot },
   { id: 'chatbox', labelKey: 'apiGuide.nav.chatbox', icon: MessagesSquare },
   { id: 'open-webui', labelKey: 'apiGuide.nav.openWebUI', icon: Laptop },
+  { id: 'opencode', labelKey: 'apiGuide.nav.openCode', icon: TerminalSquare },
   { id: 'other-tools', labelKey: 'apiGuide.nav.otherTools', icon: BookOpen },
   { id: 'billing', labelKey: 'apiGuide.nav.billing', icon: CircleDollarSign },
   {
@@ -190,6 +192,20 @@ echo`
   -v open-webui:/app/backend/data \\
   --name open-webui \\
   ghcr.io/open-webui/open-webui:main`
+  const openCodeConfig = `export EMO_API_KEY="your-emo-api-key"
+opencode`
+  const openClawConfig = `{
+  "models": {
+    "providers": {
+      "emo": {
+        "baseUrl": "${openAIBaseUrl}",
+        "apiKey": "your-emo-api-key",
+        "api": "openai-completions",
+        "models": [{ "id": "your-model-id", "name": "EMO model" }]
+      }
+    }
+  }
+}`
 
   return (
     <SectionPageLayout>
@@ -271,6 +287,73 @@ echo`
               >
                 {t('apiGuide.quickStart.step4Body')}
               </NumberedStep>
+            </GuideSection>
+
+            <GuideSection
+              id='environment'
+              title={t('apiGuide.environment.title')}
+              description={t('apiGuide.environment.description')}
+            >
+              <div className='grid gap-4 md:grid-cols-3'>
+                <div className='rounded-lg border p-4'>
+                  <h3 className='font-medium'>
+                    {t('apiGuide.environment.windowsTitle')}
+                  </h3>
+                  <p className='text-muted-foreground mt-1 text-sm leading-6'>
+                    {t('apiGuide.environment.windowsBody')}
+                  </p>
+                  <GuideCodeBlock
+                    code={'node --version\nnpm --version\ngit --version'}
+                    language='PowerShell'
+                  />
+                </div>
+                <div className='rounded-lg border p-4'>
+                  <h3 className='font-medium'>
+                    {t('apiGuide.environment.macosTitle')}
+                  </h3>
+                  <p className='text-muted-foreground mt-1 text-sm leading-6'>
+                    {t('apiGuide.environment.macosBody')}
+                  </p>
+                  <GuideCodeBlock
+                    code={'node -v\nnpm -v\ngit --version'}
+                    language='Terminal'
+                  />
+                </div>
+                <div className='rounded-lg border p-4'>
+                  <h3 className='font-medium'>
+                    {t('apiGuide.environment.linuxTitle')}
+                  </h3>
+                  <p className='text-muted-foreground mt-1 text-sm leading-6'>
+                    {t('apiGuide.environment.linuxBody')}
+                  </p>
+                  <GuideCodeBlock
+                    code={'sudo apt update\nsudo apt install -y nodejs npm git'}
+                    language='bash'
+                  />
+                </div>
+              </div>
+              <div className='rounded-lg border p-4'>
+                <h3 className='font-medium'>
+                  {t('apiGuide.environment.claudeInstallTitle')}
+                </h3>
+                <p className='text-muted-foreground mt-1 text-sm leading-6'>
+                  {t('apiGuide.environment.claudeInstallBody')}
+                </p>
+                <GuideCodeBlock
+                  code={
+                    'npm install -g @anthropic-ai/claude-code\nclaude --version'
+                  }
+                  language='bash'
+                />
+              </div>
+              <div className='rounded-lg border p-4'>
+                <h3 className='font-medium'>
+                  {t('apiGuide.environment.editorTitle')}
+                </h3>
+                <p className='text-muted-foreground mt-1 text-sm leading-6'>
+                  {t('apiGuide.environment.editorBody')}
+                </p>
+              </div>
             </GuideSection>
 
             <GuideSection
@@ -402,6 +485,30 @@ claude`}
                 {t('apiGuide.openWebUI.docker')}
               </p>
               <GuideCodeBlock code={openWebUiDocker} language='bash' />
+            </GuideSection>
+
+            <GuideSection
+              id='opencode'
+              title={t('apiGuide.openCode.title')}
+              description={t('apiGuide.openCode.description')}
+            >
+              <NumberedStep
+                number={1}
+                title={t('apiGuide.openCode.step1Title')}
+              >
+                {t('apiGuide.openCode.step1Body')}
+              </NumberedStep>
+              <GuideCodeBlock code={openCodeConfig} language='bash' />
+              <NumberedStep
+                number={2}
+                title={t('apiGuide.openCode.step2Title')}
+              >
+                {t('apiGuide.openCode.step2Body', { openAIBaseUrl })}
+              </NumberedStep>
+              <GuideCodeBlock code={openClawConfig} language='json' />
+              <div className='rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'>
+                {t('apiGuide.openCode.note')}
+              </div>
             </GuideSection>
 
             <GuideSection

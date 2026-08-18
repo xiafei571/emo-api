@@ -374,6 +374,7 @@
     "API Addresses": "API Addresses",
     "API Base URL (Important: Not Chat API) *": "API Base URL (Important: Not Chat API) *",
     "API Base URL *": "API Base URL *",
+    "Copy API Base URL": "Copy API Base URL",
     "API Endpoints": "API Endpoints",
     "API Info": "API Info",
     "API info added. Click \"Save Settings\" to apply.": "API info added. Click \"Save Settings\" to apply.",
@@ -5237,12 +5238,14 @@
       "heroDescription": "Create an API key, choose a supported model, and follow the guide for your client. Keep your key private and use the exact base URL shown below.",
       "nav": {
         "quickStart": "Quick start",
+        "environment": "Environment setup",
         "connection": "Connection details",
         "codex": "Codex",
         "claudeCode": "Claude Code",
         "cherryStudio": "Cherry Studio",
         "chatbox": "ChatBox",
         "openWebUI": "Open WebUI",
+        "openCode": "OpenCode / OpenClaw",
         "otherTools": "Other tools",
         "billing": "Billing and quota",
         "troubleshooting": "Troubleshooting",
@@ -5259,6 +5262,20 @@
         "step3Body": "Use an exact model ID available to your account. You can retrieve the list with the command in Connection details.",
         "step4Title": "Configure and test",
         "step4Body": "Enter the base URL and key in your client, then send a small test request before starting normal use."
+      },
+      "environment": {
+        "title": "Environment setup and installation",
+        "description": "Claude Code, Codex, and OpenCode need Node.js; Windows users should also install Git. Verify that the commands run in your terminal first.",
+        "windowsTitle": "Windows",
+        "windowsBody": "Install Node.js LTS and Git, then verify the versions in PowerShell.",
+        "macosTitle": "macOS",
+        "macosBody": "Install Node.js LTS and Git from nodejs.org or with your preferred package manager.",
+        "linuxTitle": "Linux",
+        "linuxBody": "Ubuntu/Debian users can run the commands below; use your distribution's package manager otherwise.",
+        "claudeInstallTitle": "Install Claude Code",
+        "claudeInstallBody": "Run this in PowerShell, Terminal, or a Linux shell. A version number confirms the installation.",
+        "editorTitle": "VS Code / Cursor / Trae",
+        "editorBody": "Complete the Claude Code or Codex setup in a terminal first, then install the matching extension from the editor marketplace. Extensions usually read the terminal configuration; never commit API keys to project files."
       },
       "connection": {
         "title": "Connection details",
@@ -5317,6 +5334,15 @@
         "step3": "Paste your EMO API key and save the connection.",
         "step4": "Refresh the model list, then choose a model in a new chat.",
         "docker": "For a new single-user Docker installation, you can pass the connection when creating the container:"
+      },
+      "openCode": {
+        "title": "OpenCode / OpenClaw",
+        "description": "These tools can connect through the OpenAI-compatible API. Confirm that your version supports a custom provider first.",
+        "step1Title": "Start OpenCode",
+        "step1Body": "After installing OpenCode, export your API key and start it in the terminal. On first use, choose a custom provider when prompted.",
+        "step2Title": "Configure OpenClaw or another provider",
+        "step2Body": "Set the provider base URL to {{openAIBaseUrl}}, enter your EMO API key, and use an exact model ID returned by /v1/models in the models list.",
+        "note": "OpenCode and OpenClaw configuration formats vary by version. Follow the current client documentation if field names differ, and never commit a real API key to a public repository."
       },
       "otherTools": {
         "title": "Other compatible tools",
