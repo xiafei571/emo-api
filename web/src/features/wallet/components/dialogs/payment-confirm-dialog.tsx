@@ -40,6 +40,8 @@ interface PaymentConfirmDialogProps {
   onOpenChange: (open: boolean) => void
   onConfirm: () => void
   topupAmount: number
+  creditAmount: number
+  paymentAmount: number
   currencyUnit: string
   paymentOptions: PaymentMethodOption[]
   selectedPaymentOptionValue?: string
@@ -53,6 +55,8 @@ export function PaymentConfirmDialog({
   onOpenChange,
   onConfirm,
   topupAmount,
+  creditAmount,
+  paymentAmount,
   currencyUnit,
   paymentOptions,
   selectedPaymentOptionValue,
@@ -80,10 +84,10 @@ export function PaymentConfirmDialog({
         <div className='space-y-3 py-3 sm:space-y-4 sm:py-4'>
           <div className='flex items-center justify-between'>
             <span className='text-muted-foreground text-sm'>
-              {t('Topup Amount')}
+              {t('Amount credited')}
             </span>
             <span className='text-lg font-semibold'>
-              {formatNumber(topupAmount)} {currencyUnit}
+              {formatNumber(creditAmount)} {currencyUnit}
             </span>
           </div>
 
@@ -96,11 +100,22 @@ export function PaymentConfirmDialog({
             ) : (
               <div className='flex items-baseline gap-2'>
                 <span className='text-2xl font-semibold'>
-                  {formatNumber(topupAmount)} {currencyUnit}
+                  {formatNumber(paymentAmount || topupAmount)} {currencyUnit}
                 </span>
               </div>
             )}
           </div>
+
+          {creditAmount > topupAmount && (
+            <div className='flex items-center justify-between'>
+              <span className='text-muted-foreground text-sm'>
+                {t('Bonus')}
+              </span>
+              <span className='font-medium text-green-600'>
+                +{formatNumber(creditAmount - topupAmount)} {currencyUnit}
+              </span>
+            </div>
+          )}
 
           <div className='border-t pt-4'>
             <div className='flex items-center justify-between'>

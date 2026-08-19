@@ -2,6 +2,7 @@ package common
 
 import (
 	"encoding/json"
+	"math"
 	"sync"
 )
 
@@ -38,4 +39,15 @@ func GetTopupGroupRatio(name string) float64 {
 		return 1
 	}
 	return ratio
+}
+
+// GetTopupCreditAmount returns the amount credited after applying the user's
+// top-up group ratio. The value is captured when the order is created so a
+// later group change cannot alter an existing order.
+func GetTopupCreditAmount(amount int64, group string) int64 {
+	ratio := GetTopupGroupRatio(group)
+	if ratio <= 0 {
+		ratio = 1
+	}
+	return int64(math.Round(float64(amount) * ratio))
 }

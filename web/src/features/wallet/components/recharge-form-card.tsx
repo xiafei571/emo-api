@@ -41,6 +41,8 @@ interface RechargeFormCardProps {
   selectedPreset: number | null
   onSelectPreset: (preset: PresetAmount) => void
   topupAmount: number
+  paymentAmount: number
+  topupRatio: number
   onTopupAmountChange: (amount: number) => void
   currencyUnit: string
   onRecharge: () => void
@@ -64,6 +66,8 @@ export function RechargeFormCard({
   selectedPreset,
   onSelectPreset,
   topupAmount,
+  paymentAmount,
+  topupRatio,
   onTopupAmountChange,
   currencyUnit,
   onRecharge,
@@ -189,6 +193,11 @@ export function RechargeFormCard({
                         topupInfo?.discount?.[preset.value] ||
                         1.0
                       const hasDiscount = discount > 0 && discount < 1
+                      const creditedAmount = Math.round(
+                        preset.value * topupRatio
+                      )
+                      const hasBonus = topupRatio > 1
+                      const bonusPercent = Math.round((topupRatio - 1) * 100)
                       return (
                         <Button
                           key={preset.value}
@@ -212,8 +221,22 @@ export function RechargeFormCard({
                             )}
                           </div>
                           <div className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'>
-                            {currencyUnit}
+                            {hasBonus ? (
+                              <span className='text-green-600'>
+                                {t('Receive')} {formatNumber(creditedAmount)}{' '}
+                                {currencyUnit}
+                              </span>
+                            ) : (
+                              currencyUnit
+                            )}
                           </div>
+                          {hasBonus && (
+                            <div className='text-[11px] font-medium text-green-600'>
+                              {t('Bonus {{percent}}%', {
+                                percent: bonusPercent,
+                              })}
+                            </div>
+                          )}
                         </Button>
                       )
                     })}
@@ -242,9 +265,19 @@ export function RechargeFormCard({
                     <span className='text-muted-foreground truncate text-xs'>
                       {t('Amount to pay:')}
                     </span>
-                    <span className='text-sm font-semibold'>
-                      {formatNumber(topupAmount)} {currencyUnit}
-                    </span>
+                    <div className='text-right'>
+                      <div className='text-sm font-semibold'>
+                        {formatNumber(paymentAmount || topupAmount)}{' '}
+                        {currencyUnit}
+                      </div>
+                      {topupRatio > 1 && (
+                        <div className='text-[11px] font-medium text-green-600'>
+                          {t('Receive')}{' '}
+                          {formatNumber(Math.round(topupAmount * topupRatio))}{' '}
+                          {currencyUnit}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

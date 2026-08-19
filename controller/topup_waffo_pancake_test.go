@@ -54,28 +54,24 @@ func TestGetWaffoPancakePayMoney(t *testing.T) {
 	testCases := []struct {
 		name             string
 		amount           int64
-		group            string
 		quotaDisplayType string
 		expected         float64
 	}{
 		{
-			name:             "currency display applies unit price group ratio and discount",
+			name:             "currency display applies unit price and discount",
 			amount:           10,
-			group:            "vip",
 			quotaDisplayType: operation_setting.QuotaDisplayTypeUSD,
-			expected:         24,
+			expected:         20,
 		},
 		{
 			name:             "tokens display converts quota to display units before pricing",
 			amount:           int64(common.QuotaPerUnit * 3),
-			group:            "vip",
 			quotaDisplayType: operation_setting.QuotaDisplayTypeTokens,
-			expected:         4.5,
+			expected:         3.75,
 		},
 		{
 			name:             "non-positive discount falls back to no discount",
 			amount:           20,
-			group:            "default",
 			quotaDisplayType: operation_setting.QuotaDisplayTypeUSD,
 			expected:         50,
 		},
@@ -84,7 +80,7 @@ func TestGetWaffoPancakePayMoney(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			operation_setting.GetGeneralSetting().QuotaDisplayType = tc.quotaDisplayType
-			actual := getWaffoPancakePayMoney(tc.amount, tc.group)
+			actual := getWaffoPancakePayMoney(tc.amount)
 			require.InDelta(t, tc.expected, actual, 0.000001)
 		})
 	}

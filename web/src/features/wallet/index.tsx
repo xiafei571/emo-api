@@ -91,8 +91,16 @@ export function Wallet(props: WalletProps) {
     }
     return 'USD'
   }, [currency?.customCurrencySymbol, currency?.quotaDisplayType])
-  const { calculating, processing, calculatePaymentAmount, processPayment } =
-    usePayment()
+  const {
+    amount: paymentAmount,
+    calculating,
+    processing,
+    calculatePaymentAmount,
+    processPayment,
+  } = usePayment()
+  const configuredTopupRatio = topupInfo?.topup_group_ratio ?? 1
+  const topupRatio = configuredTopupRatio > 0 ? configuredTopupRatio : 1
+  const creditAmount = Math.round(topupAmount * topupRatio)
   const {
     affiliateLink,
     loading: affiliateLoading,
@@ -392,6 +400,8 @@ export function Wallet(props: WalletProps) {
                   selectedPreset={selectedPreset}
                   onSelectPreset={handleSelectPreset}
                   topupAmount={topupAmount}
+                  paymentAmount={paymentAmount}
+                  topupRatio={topupRatio}
                   onTopupAmountChange={handleTopupAmountChange}
                   currencyUnit={currencyUnit}
                   onRecharge={handleOpenRecharge}
@@ -438,6 +448,8 @@ export function Wallet(props: WalletProps) {
         onOpenChange={setConfirmDialogOpen}
         onConfirm={handlePaymentConfirm}
         topupAmount={topupAmount}
+        creditAmount={creditAmount}
+        paymentAmount={paymentAmount}
         currencyUnit={currencyUnit}
         paymentOptions={paymentOptions}
         selectedPaymentOptionValue={selectedPaymentOptionValue}

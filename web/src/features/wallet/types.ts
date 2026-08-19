@@ -169,6 +169,8 @@ export interface TopupInfo {
   payment_compliance_confirmed?: boolean
   /** Current compliance terms version */
   payment_compliance_terms_version?: string
+  /** Top-up credit multiplier for the current user's group */
+  topup_group_ratio?: number
 }
 
 /**
