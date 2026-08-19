@@ -24,11 +24,7 @@ import { Dialog } from '@/components/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  formatQuota,
-  parseQuotaFromDollars,
-  quotaUnitsToDollars,
-} from '@/lib/format'
+import { formatNumber } from '@/lib/format'
 import {
   DEFAULT_CURRENCY_CONFIG,
   useSystemConfigStore,
@@ -51,15 +47,15 @@ export function TransferDialog({
 }: TransferDialogProps) {
   const { t } = useTranslation()
   const currencyConfig = useSystemConfigStore((state) => state.config.currency)
-  const minimumQuota = Math.ceil(
+  const quotaPerUnit =
     currencyConfig.quotaPerUnit > 0
       ? currencyConfig.quotaPerUnit
       : DEFAULT_CURRENCY_CONFIG.quotaPerUnit
-  )
-  const minimumAmount = quotaUnitsToDollars(minimumQuota)
-  const maximumAmount = quotaUnitsToDollars(availableQuota)
+  const minimumQuota = Math.ceil(quotaPerUnit)
+  const minimumAmount = 1
+  const maximumAmount = availableQuota / quotaPerUnit
   const [amount, setAmount] = useState(minimumAmount)
-  const transferQuota = parseQuotaFromDollars(amount)
+  const transferQuota = Math.round(amount * quotaPerUnit)
   const canTransfer =
     Number.isFinite(amount) &&
     transferQuota >= minimumQuota &&
@@ -117,7 +113,7 @@ export function TransferDialog({
             {t('Available Rewards')}
           </Label>
           <div className='text-2xl font-semibold'>
-            {formatQuota(availableQuota)}
+            {formatNumber(availableQuota / quotaPerUnit)} {t('credits')}
           </div>
         </div>
 
@@ -139,7 +135,8 @@ export function TransferDialog({
             className='font-mono text-lg'
           />
           <p className='text-muted-foreground text-xs'>
-            {t('Minimum:')} {formatQuota(minimumQuota)}
+            {t('Minimum:')} {formatNumber(minimumQuota / quotaPerUnit)}{' '}
+            {t('credits')}
           </p>
         </div>
       </div>
