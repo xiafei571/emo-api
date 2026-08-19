@@ -18,7 +18,14 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, KeyRound, Settings2, WalletCards } from 'lucide-react'
+import {
+  ChevronDown,
+  Eye,
+  KeyRound,
+  Loader2,
+  Settings2,
+  WalletCards,
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useForm, type SubmitErrorHandler } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -42,6 +49,13 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Form,
   FormControl,
   FormDescription,
@@ -63,7 +77,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useStatus } from '@/hooks/use-status'
-import { getUserModels, getUserGroups } from '@/lib/api'
+import { getUserModels, getUserModelsByGroup, getUserGroups } from '@/lib/api'
 import { getCurrencyDisplay, getCurrencyLabel } from '@/lib/currency'
 import { cn } from '@/lib/utils'
 
@@ -100,6 +114,9 @@ export function ApiKeysMutateDrawer({
   const { status } = useStatus()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [modelsDialogOpen, setModelsDialogOpen] = useState(false)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [modelsLoading, setModelsLoading] = useState(false)
   const defaultUseAutoGroup = status?.default_use_auto_group === true
 
   // Fetch models
@@ -250,6 +267,25 @@ export function ApiKeysMutateDrawer({
   const selectedGroup = form.watch('group')
   const unlimitedQuota = form.watch('unlimited_quota')
 
+  const handleViewAvailableModels = async () => {
+    setModelsDialogOpen(true)
+    setModelsLoading(true)
+    try {
+      const result = await getUserModelsByGroup(selectedGroup || undefined)
+      if (result.success) {
+        setAvailableModels(result.data || [])
+      } else {
+        setAvailableModels([])
+        toast.error(result.message || t('Failed to load available models'))
+      }
+    } catch {
+      setAvailableModels([])
+      toast.error(t('Failed to load available models'))
+    } finally {
+      setModelsLoading(false)
+    }
+  }
+
   return (
     <Sheet
       open={open}
@@ -307,12 +343,30 @@ export function ApiKeysMutateDrawer({
                   <FormItem>
                     <FormLabel>{t('Group')}</FormLabel>
                     <FormControl>
-                      <ApiKeyGroupCombobox
-                        options={groups}
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        placeholder={t('Select a group')}
-                      />
+                      <div className='flex gap-2'>
+                        <div className='min-w-0 flex-1'>
+                          <ApiKeyGroupCombobox
+                            options={groups}
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            placeholder={t('Select a group')}
+                          />
+                        </div>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          className='shrink-0 gap-1.5'
+                          onClick={handleViewAvailableModels}
+                          disabled={!field.value || modelsLoading}
+                        >
+                          {modelsLoading ? (
+                            <Loader2 className='size-4 animate-spin' />
+                          ) : (
+                            <Eye className='size-4' />
+                          )}
+                          {t('Available models')}
+                        </Button>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -602,6 +656,37 @@ export function ApiKeysMutateDrawer({
           </Button>
         </SheetFooter>
       </SheetContent>
+      <Dialog open={modelsDialogOpen} onOpenChange={setModelsDialogOpen}>
+        <DialogContent className='max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>{t('Available models')}</DialogTitle>
+            <DialogDescription>
+              {t('Models available in the selected group')}
+            </DialogDescription>
+          </DialogHeader>
+          {modelsLoading ? (
+            <div className='text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm'>
+              <Loader2 className='size-4 animate-spin' />
+              {t('Loading...')}
+            </div>
+          ) : availableModels.length > 0 ? (
+            <div className='grid max-h-[min(60vh,28rem)] gap-2 overflow-y-auto sm:grid-cols-2'>
+              {availableModels.map((model) => (
+                <div
+                  key={model}
+                  className='bg-muted/40 rounded-md border px-3 py-2 font-mono text-xs'
+                >
+                  {model}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className='text-muted-foreground py-8 text-center text-sm'>
+              {t('No available models')}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Sheet>
   )
 }

@@ -50,7 +50,16 @@ export async function getUserModels(): Promise<{
   message?: string
   data?: string[]
 }> {
-  const res = await api.get('/api/user/models')
+  return getUserModelsByGroup()
+}
+
+export async function getUserModelsByGroup(group?: string): Promise<{
+  success: boolean
+  message?: string
+  data?: string[]
+}> {
+  const query = group ? `?group=${encodeURIComponent(group)}` : ''
+  const res = await api.get(`/api/user/models${query}`)
   return res.data
 }
 

@@ -25,6 +25,7 @@ import {
   ExternalLink,
   ArrowRightLeft,
   Copy,
+  Eye,
   Link,
   Loader2,
 } from 'lucide-react'
@@ -34,6 +35,13 @@ import { toast } from 'sonner'
 
 import { DataTableRowActionMenu } from '@/components/data-table/core/row-action-menu'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -50,6 +58,7 @@ import {
 import { useChatPresets } from '@/features/chat/hooks/use-chat-presets'
 import { resolveChatUrl, type ChatPreset } from '@/features/chat/lib/chat-links'
 import { sendToFluent } from '@/features/chat/lib/send-to-fluent'
+import { getUserModelsByGroup } from '@/lib/api'
 import { encodeChannelConnectionInfo } from '@/lib/channel-connection-info'
 import { copyToClipboard } from '@/lib/copy-to-clipboard'
 
@@ -92,6 +101,9 @@ export function DataTableRowActions<TData>({
   const isEnabled = apiKey.status === API_KEY_STATUS.ENABLED
   const { chatPresets, serverAddress } = useChatPresets()
   const [isTogglingStatus, setIsTogglingStatus] = useState(false)
+  const [modelsDialogOpen, setModelsDialogOpen] = useState(false)
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [modelsLoading, setModelsLoading] = useState(false)
   const resolvedRealKey = resolvedKeys[apiKey.id]
   const isRealKeyLoading = Boolean(loadingKeys[apiKey.id])
 
@@ -113,6 +125,25 @@ export function DataTableRowActions<TData>({
     toast.info(t('API key is loading, please try again in a moment'))
     return null
   }, [apiKey.id, resolvedRealKey, resolveRealKey, t])
+
+  const handleViewAvailableModels = useCallback(async () => {
+    setModelsDialogOpen(true)
+    setModelsLoading(true)
+    try {
+      const result = await getUserModelsByGroup(apiKey.group || 'default')
+      if (result.success) {
+        setAvailableModels(result.data || [])
+      } else {
+        setAvailableModels([])
+        toast.error(result.message || t('Failed to load available models'))
+      }
+    } catch {
+      setAvailableModels([])
+      toast.error(t('Failed to load available models'))
+    } finally {
+      setModelsLoading(false)
+    }
+  }, [apiKey.group, t])
 
   const handleOpenChatPreset = useCallback(
     async (preset: ChatPreset) => {
@@ -269,6 +300,13 @@ export function DataTableRowActions<TData>({
           </DropdownMenuShortcut>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleViewAvailableModels}>
+          {t('Available models')}
+          <DropdownMenuShortcut>
+            <Eye size={16} />
+          </DropdownMenuShortcut>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {
             const realKey = await resolveRealKey(apiKey.id)
@@ -317,6 +355,37 @@ export function DataTableRowActions<TData>({
           </DropdownMenuShortcut>
         </DropdownMenuItem>
       </DataTableRowActionMenu>
+      <Dialog open={modelsDialogOpen} onOpenChange={setModelsDialogOpen}>
+        <DialogContent className='max-w-lg'>
+          <DialogHeader>
+            <DialogTitle>{t('Available models')}</DialogTitle>
+            <DialogDescription>
+              {t('Models available in the selected group')}
+            </DialogDescription>
+          </DialogHeader>
+          {modelsLoading ? (
+            <div className='text-muted-foreground flex items-center justify-center gap-2 py-8 text-sm'>
+              <Loader2 className='size-4 animate-spin' />
+              {t('Loading...')}
+            </div>
+          ) : availableModels.length > 0 ? (
+            <div className='grid max-h-[min(60vh,28rem)] gap-2 overflow-y-auto sm:grid-cols-2'>
+              {availableModels.map((model) => (
+                <div
+                  key={model}
+                  className='bg-muted/40 rounded-md border px-3 py-2 font-mono text-xs'
+                >
+                  {model}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className='text-muted-foreground py-8 text-center text-sm'>
+              {t('No available models')}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
