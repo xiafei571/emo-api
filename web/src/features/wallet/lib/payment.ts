@@ -127,11 +127,6 @@ export function getDefaultPaymentType(topupInfo: TopupInfo | null): string {
     return DEFAULT_PAYMENT_TYPE
   }
 
-  // Return first available payment method or default
-  if (topupInfo.pay_methods?.length > 0) {
-    return topupInfo.pay_methods[0].type
-  }
-
   if (topupInfo.enable_stripe_topup) {
     return PAYMENT_TYPES.STRIPE
   }
@@ -153,10 +148,6 @@ export function getDefaultPaymentType(topupInfo: TopupInfo | null): string {
 export function getMinTopupAmount(topupInfo: TopupInfo | null): number {
   if (!topupInfo) {
     return DEFAULT_MIN_TOPUP
-  }
-
-  if (topupInfo.enable_online_topup) {
-    return topupInfo.min_topup
   }
 
   if (topupInfo.enable_stripe_topup) {

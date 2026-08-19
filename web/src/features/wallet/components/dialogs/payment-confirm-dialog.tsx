@@ -84,22 +84,13 @@ export function PaymentConfirmDialog({
         <div className='space-y-3 py-3 sm:space-y-4 sm:py-4'>
           <div className='flex items-center justify-between'>
             <span className='text-muted-foreground text-sm'>
-              {t('Amount credited')}
-            </span>
-            <span className='text-lg font-semibold'>
-              {formatNumber(creditAmount)} {currencyUnit}
-            </span>
-          </div>
-
-          <div className='flex items-center justify-between'>
-            <span className='text-muted-foreground text-sm'>
               {t('You Pay')}
             </span>
             {calculating ? (
               <Skeleton className='h-6 w-24' />
             ) : (
               <div className='flex items-baseline gap-2'>
-                <span className='text-2xl font-semibold'>
+                <span className='text-xl font-semibold'>
                   {formatNumber(paymentAmount || topupAmount)} {currencyUnit}
                 </span>
               </div>
@@ -111,11 +102,20 @@ export function PaymentConfirmDialog({
               <span className='text-muted-foreground text-sm'>
                 {t('Bonus')}
               </span>
-              <span className='font-medium text-green-600'>
-                +{formatNumber(creditAmount - topupAmount)} {currencyUnit}
+              <span className='text-sm font-medium text-green-600'>
+                +{formatNumber(creditAmount - topupAmount)} {t('credits')}
               </span>
             </div>
           )}
+
+          <div className='flex items-center justify-between border-t pt-3'>
+            <span className='text-muted-foreground text-sm'>
+              {t('Amount credited')}
+            </span>
+            <span className='text-3xl font-bold'>
+              {formatNumber(creditAmount)} {t('credits')}
+            </span>
+          </div>
 
           <div className='border-t pt-4'>
             <div className='flex items-center justify-between'>

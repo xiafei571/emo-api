@@ -101,6 +101,8 @@ export function Wallet(props: WalletProps) {
   const configuredTopupRatio = topupInfo?.topup_group_ratio ?? 1
   const topupRatio = configuredTopupRatio > 0 ? configuredTopupRatio : 1
   const creditAmount = Math.round(topupAmount * topupRatio)
+  const currentBalanceCredits =
+    (user?.quota ?? 0) / (currency?.quotaPerUnit || 500000)
   const {
     affiliateLink,
     loading: affiliateLoading,
@@ -115,24 +117,14 @@ export function Wallet(props: WalletProps) {
 
   const paymentOptions = useMemo<PaymentMethodOption[]>(() => {
     const configuredMethods = topupInfo?.pay_methods ?? []
-    const coreMethods = [
-      { type: PAYMENT_TYPES.ALIPAY, name: t('Alipay') },
-      { type: PAYMENT_TYPES.WECHAT, name: t('WeChat Pay') },
-      { type: PAYMENT_TYPES.STRIPE, name: 'Stripe' },
-    ]
+    const coreMethods = [{ type: PAYMENT_TYPES.STRIPE, name: 'Stripe' }]
 
     const options: PaymentMethodOption[] = coreMethods.map(({ type, name }) => {
       const configured = configuredMethods.find(
         (method) => method.type === type
       )
-      const gatewayEnabled =
-        type === PAYMENT_TYPES.STRIPE
-          ? Boolean(topupInfo?.enable_stripe_topup)
-          : Boolean(topupInfo?.enable_online_topup)
-      const gatewayMinimum =
-        type === PAYMENT_TYPES.STRIPE
-          ? topupInfo?.stripe_min_topup || 0
-          : topupInfo?.min_topup || 0
+      const gatewayEnabled = Boolean(topupInfo?.enable_stripe_topup)
+      const gatewayMinimum = topupInfo?.stripe_min_topup || 0
       const minimum = Math.max(configured?.min_topup || 0, gatewayMinimum)
       const meetsMinimum = topupAmount >= minimum
       let disabledReason: string | undefined
@@ -151,31 +143,6 @@ export function Wallet(props: WalletProps) {
         disabledReason,
       }
     })
-
-    const coreTypes = new Set<string>(coreMethods.map(({ type }) => type))
-    configuredMethods
-      .filter((method) => !coreTypes.has(method.type))
-      .forEach((method) => {
-        const minimum = Math.max(
-          method.min_topup || 0,
-          topupInfo?.min_topup || 0
-        )
-        const meetsMinimum = topupAmount >= minimum
-        let disabledReason: string | undefined
-        if (!topupInfo?.enable_online_topup) {
-          disabledReason = t('Not configured')
-        } else if (!meetsMinimum) {
-          disabledReason = t('Minimum topup amount: {{amount}}', {
-            amount: minimum,
-          })
-        }
-        options.push({
-          value: method.type,
-          method,
-          enabled: Boolean(topupInfo?.enable_online_topup) && meetsMinimum,
-          disabledReason,
-        })
-      })
 
     if (topupInfo?.enable_waffo_topup) {
       const minimum = topupInfo.waffo_min_topup || 0
@@ -246,16 +213,25 @@ export function Wallet(props: WalletProps) {
   // Initialize topup amount when topup info is loaded
   const topupAmountInitializedRef = useRef(false)
   useEffect(() => {
-    if (topupInfo && !topupAmountInitializedRef.current) {
+    if (
+      topupInfo &&
+      !topupAmountInitializedRef.current &&
+      (presetAmounts.length > 0 || topupInfo.amount_options.length === 0)
+    ) {
       topupAmountInitializedRef.current = true
       const minTopup = getMinTopupAmount(topupInfo)
-      setTopupAmount(minTopup)
+      const defaultPreset =
+        presetAmounts.find((preset) => preset.value === 5) || presetAmounts[0]
+      const initialAmount = defaultPreset?.value ?? minTopup
+
+      setTopupAmount(initialAmount)
+      setSelectedPreset(defaultPreset?.value ?? null)
 
       // Calculate initial payment amount with default payment type
       const defaultPaymentType = getDefaultPaymentType(topupInfo)
-      calculatePaymentAmount(minTopup, defaultPaymentType)
+      calculatePaymentAmount(initialAmount, defaultPaymentType)
     }
-  }, [topupInfo, calculatePaymentAmount])
+  }, [topupInfo, presetAmounts, calculatePaymentAmount])
 
   // Get current payment type (selected or default)
   const getCurrentPaymentType = useCallback(() => {
@@ -402,6 +378,7 @@ export function Wallet(props: WalletProps) {
                   topupAmount={topupAmount}
                   paymentAmount={paymentAmount}
                   topupRatio={topupRatio}
+                  currentBalanceCredits={currentBalanceCredits}
                   onTopupAmountChange={handleTopupAmountChange}
                   currencyUnit={currencyUnit}
                   onRecharge={handleOpenRecharge}

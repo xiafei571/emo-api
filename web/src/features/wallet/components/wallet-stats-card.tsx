@@ -21,7 +21,8 @@ import { useTranslation } from 'react-i18next'
 
 import { IconBadge, type IconBadgeTone } from '@/components/ui/icon-badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatQuota } from '@/lib/format'
+import { useSystemConfig } from '@/hooks/use-system-config'
+import { formatNumber } from '@/lib/format'
 
 import type { UserWalletData } from '../types'
 
@@ -32,6 +33,10 @@ interface WalletStatsCardProps {
 
 export function WalletStatsCard(props: WalletStatsCardProps) {
   const { t } = useTranslation()
+  const { currency } = useSystemConfig()
+  const quotaPerUnit = currency?.quotaPerUnit || 500000
+  const formatCredits = (quota: number) =>
+    `${formatNumber(quota / quotaPerUnit)} ${t('credits')}`
   if (props.loading) {
     return (
       <div className='grid grid-cols-3 divide-x rounded-lg border'>
@@ -55,15 +60,15 @@ export function WalletStatsCard(props: WalletStatsCardProps) {
   }[] = [
     {
       label: t('Current Balance'),
-      value: formatQuota(props.user?.quota ?? 0),
-      description: t('Remaining quota'),
+      value: formatCredits(props.user?.quota ?? 0),
+      description: t('Available platform credits'),
       icon: WalletCards,
       tone: 'success',
     },
     {
       label: t('Total Usage'),
-      value: formatQuota(props.user?.used_quota ?? 0),
-      description: t('Total consumed quota'),
+      value: formatCredits(props.user?.used_quota ?? 0),
+      description: t('Total consumed credits'),
       icon: BarChart3,
       tone: 'info',
     },
