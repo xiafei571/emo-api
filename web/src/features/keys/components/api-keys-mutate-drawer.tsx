@@ -341,32 +341,31 @@ export function ApiKeysMutateDrawer({
                 name='group'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('Group')}</FormLabel>
+                    <div className='flex items-center gap-2'>
+                      <FormLabel>{t('Group')}</FormLabel>
+                      <Button
+                        type='button'
+                        variant='outline'
+                        size='sm'
+                        className='h-8 shrink-0 gap-1.5 px-2.5'
+                        onClick={handleViewAvailableModels}
+                        disabled={!field.value || modelsLoading}
+                      >
+                        {modelsLoading ? (
+                          <Loader2 className='size-4 animate-spin' />
+                        ) : (
+                          <Eye className='size-4' />
+                        )}
+                        {t('Available models')}
+                      </Button>
+                    </div>
                     <FormControl>
-                      <div className='flex gap-2'>
-                        <div className='min-w-0 flex-1'>
-                          <ApiKeyGroupCombobox
-                            options={groups}
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            placeholder={t('Select a group')}
-                          />
-                        </div>
-                        <Button
-                          type='button'
-                          variant='outline'
-                          className='shrink-0 gap-1.5'
-                          onClick={handleViewAvailableModels}
-                          disabled={!field.value || modelsLoading}
-                        >
-                          {modelsLoading ? (
-                            <Loader2 className='size-4 animate-spin' />
-                          ) : (
-                            <Eye className='size-4' />
-                          )}
-                          {t('Available models')}
-                        </Button>
-                      </div>
+                      <ApiKeyGroupCombobox
+                        options={groups}
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        placeholder={t('Select a group')}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
