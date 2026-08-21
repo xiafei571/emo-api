@@ -5329,11 +5329,11 @@
         "description": "配置 Codex 使用 OpenAI 兼容的 Responses API。",
         "step1Title": "设置 API 密钥",
         "step1Body": "将密钥保存到环境变量，不要直接写入配置文件。",
-        "step2Title": "添加服务商",
-        "step2Body": "把以下服务商配置加入 ~/.codex/config.toml，并且只添加一次 [model_providers.emo]。不要设置顶层 model_provider，这样普通启动仍使用原有服务商。",
-        "step3Title": "启动 Codex",
-        "step3Body": "在刚才导出 EMO_API_KEY 的同一个终端用以下命令按需启动 EMO。示例模型可替换为 /v1/models 返回的准确 ID。临时导出的变量不会自动进入新终端。",
-        "note": "该命令只为本次启动选择 EMO；普通 codex 命令仍使用原有服务商。Codex 需要 Responses API，因此 wire_api 必须为 responses，base_url 必须包含 /v1。"
+        "step2Title": "添加 EMO API 服务商",
+        "step2Body": "把以下配置加入 ~/.codex/config.toml。顶层 model_provider 必须设置为 \"emo\"，并确保 [model_providers.emo] 只添加一次。base_url 使用 EMO API 的 /v1 地址，wire_api 使用 responses，env_key 使用 EMO_API_KEY。",
+        "step3Title": "重启 Codex App",
+        "step3Body": "保存配置后重启 Codex App，无需在命令行额外指定 provider。启动后即可在左下角看到 EMO API。",
+        "note": "如果左下角没有显示 EMO API，请检查配置文件路径、顶层 model_provider 和 [model_providers.emo] 的拼写。Codex 需要 Responses API，因此 wire_api 必须为 responses，base_url 必须包含 /v1。"
       },
       "claudeCode": {
         "title": "Claude Code",

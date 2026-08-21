@@ -5329,11 +5329,11 @@
         "description": "Configure Codex to use the OpenAI-compatible Responses API.",
         "step1Title": "Set the API key",
         "step1Body": "Store the key in an environment variable instead of writing it into the config file.",
-        "step2Title": "Add a provider",
-        "step2Body": "Add the provider configuration below to ~/.codex/config.toml, with [model_providers.emo] appearing only once. Do not set a top-level model_provider, so normal launches keep using your existing provider.",
-        "step3Title": "Start Codex",
-        "step3Body": "Run the command below in the same terminal where you exported EMO_API_KEY to use EMO on demand. Replace the example model with another exact ID returned by /v1/models if needed. A new terminal will not inherit a temporary export.",
-        "note": "This command selects EMO for this launch only; the regular codex command keeps using your existing provider. Codex requires the Responses API, so keep wire_api set to responses and include /v1 in base_url."
+        "step2Title": "Add the EMO API provider",
+        "step2Body": "Add the configuration below to ~/.codex/config.toml. The top-level model_provider must be set to \"emo\", and [model_providers.emo] should appear only once. Use the EMO API /v1 URL for base_url, responses for wire_api, and EMO_API_KEY for env_key.",
+        "step3Title": "Restart the Codex app",
+        "step3Body": "Save the configuration and restart the Codex app. You do not need to pass a provider on the command line; EMO API will appear in the lower-left provider menu after launch.",
+        "note": "If EMO API does not appear in the lower-left menu, check the config file path, the top-level model_provider value, and the [model_providers.emo] spelling. Codex requires the Responses API, so keep wire_api set to responses and include /v1 in base_url."
       },
       "claudeCode": {
         "title": "Claude Code",

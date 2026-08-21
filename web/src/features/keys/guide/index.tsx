@@ -162,12 +162,13 @@ export function ApiUsageGuide() {
   const origin = window.location.origin
   const openAIBaseUrl = `${origin}/v1`
   const setApiKey = 'export EMO_API_KEY="your-emo-api-key"'
-  const codexConfig = `[model_providers.emo]
+  const codexConfig = `model_provider = "emo"
+
+[model_providers.emo]
 name = "EMO API"
 base_url = "${openAIBaseUrl}"
 wire_api = "responses"
 env_key = "EMO_API_KEY"`
-  const codexCommand = `codex --config model_provider='"emo"' --model gpt-5.6-terra`
   const claudeSettings = `{
   "env": {
     "ANTHROPIC_BASE_URL": "${origin}",
@@ -405,7 +406,6 @@ opencode`
               <NumberedStep number={3} title={t('apiGuide.codex.step3Title')}>
                 {t('apiGuide.codex.step3Body')}
               </NumberedStep>
-              <GuideCodeBlock code={codexCommand} language='bash' />
               <div className='rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100'>
                 {t('apiGuide.codex.note')}
               </div>

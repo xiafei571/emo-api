@@ -5312,11 +5312,11 @@
         "description": "OpenAI 互換 Responses API を使うよう Codex を設定します。",
         "step1Title": "API キーを設定",
         "step1Body": "キーを設定ファイルに直接書かず、環境変数に保存します。",
-        "step2Title": "プロバイダーを追加",
-        "step2Body": "以下のプロバイダー設定を ~/.codex/config.toml に追加し、[model_providers.emo] は一度だけ定義してください。通常起動で既存のプロバイダーを使い続けるため、トップレベルの model_provider は設定しません。",
-        "step3Title": "Codex を起動",
-        "step3Body": "EMO_API_KEY をエクスポートした同じターミナルで以下のコマンドを実行し、必要なときだけ EMO を使います。例のモデルは /v1/models が返す正確な ID に変更できます。一時的なエクスポートは新しいターミナルには引き継がれません。",
-        "note": "このコマンドは今回の起動だけ EMO を選択し、通常の codex コマンドは既存のプロバイダーを使います。Codex には Responses API が必要なため、wire_api は responses、base_url には /v1 を含めてください。"
+        "step2Title": "EMO API プロバイダーを追加",
+        "step2Body": "以下の設定を ~/.codex/config.toml に追加します。トップレベルの model_provider は \"emo\" に設定し、[model_providers.emo] は一度だけ定義してください。base_url には EMO API の /v1 URL、wire_api には responses、env_key には EMO_API_KEY を使用します。",
+        "step3Title": "Codex アプリを再起動",
+        "step3Body": "設定を保存して Codex アプリを再起動します。コマンドラインでプロバイダーを指定する必要はなく、起動後に左下のプロバイダーメニューへ EMO API が表示されます。",
+        "note": "左下のメニューに EMO API が表示されない場合は、設定ファイルのパス、トップレベルの model_provider、[model_providers.emo] の綴りを確認してください。Codex には Responses API が必要なため、wire_api は responses、base_url には /v1 を含めてください。"
       },
       "claudeCode": {
         "title": "Claude Code",
