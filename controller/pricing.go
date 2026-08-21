@@ -33,7 +33,7 @@ func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string
 	return filtered
 }
 
-func GetPricing(c *gin.Context) {
+func getPricingResponse(c *gin.Context) gin.H {
 	pricing := model.GetPricing()
 	userId, exists := c.Get("id")
 	usableGroup := map[string]string{}
@@ -64,7 +64,7 @@ func GetPricing(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, gin.H{
+	return gin.H{
 		"success":            true,
 		"data":               pricing,
 		"vendors":            model.GetVendors(),
@@ -73,7 +73,17 @@ func GetPricing(c *gin.Context) {
 		"supported_endpoint": model.GetSupportedEndpointMap(),
 		"auto_groups":        service.GetUserAutoGroup(group),
 		"pricing_version":    "a42d372ccf0b5dd13ecf71203521f9d2",
-	})
+	}
+}
+
+func GetPricing(c *gin.Context) {
+	c.JSON(200, getPricingResponse(c))
+}
+
+// GetDiscountPricing exposes the same model data for the public discount page.
+// It intentionally does not depend on the optional pricing navigation module.
+func GetDiscountPricing(c *gin.Context) {
+	c.JSON(200, getPricingResponse(c))
 }
 
 func ResetModelRatio(c *gin.Context) {

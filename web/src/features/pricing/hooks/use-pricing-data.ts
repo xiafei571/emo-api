@@ -23,12 +23,12 @@ import { useStatus } from '@/hooks/use-status'
 
 import { getPricing } from '../api'
 
-export function usePricingData() {
+export function usePricingData(endpoint = '/api/pricing') {
   const { status } = useStatus()
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['pricing'],
-    queryFn: getPricing,
+    queryKey: ['pricing', endpoint],
+    queryFn: () => getPricing(endpoint),
     staleTime: 5 * 60 * 1000,
   })
 
