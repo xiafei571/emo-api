@@ -310,6 +310,8 @@ export const STATIC_I18N_KEYS = [
   'No Reset',
   'Remaining',
   'Received',
+  'Payment amount',
+  'Credits received',
   'Payment initiated',
   'Payment page opened',
 

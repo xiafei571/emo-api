@@ -45,7 +45,7 @@ import {
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard'
-import { formatCurrencyFromUSD } from '@/lib/currency'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { formatNumber } from '@/lib/format'
 
 import { useBillingHistory } from '../../hooks/use-billing-history'
@@ -181,6 +181,13 @@ export function BillingHistoryDialog({
               <div className='space-y-3'>
                 {records.map((record) => {
                   const statusConfig = getStatusConfig(record.status)
+                  const isStripeRecord = record.payment_provider === 'stripe'
+                  const paymentAmount = isStripeRecord
+                    ? record.amount
+                    : record.money
+                  const creditedAmount = isStripeRecord
+                    ? record.money
+                    : record.amount
                   return (
                     <div
                       key={record.id}
@@ -238,22 +245,28 @@ export function BillingHistoryDialog({
                         </div>
                         <div className='space-y-1'>
                           <Label className='text-muted-foreground text-xs'>
-                            {t('Amount')}
+                            {t('Payment amount')}
                           </Label>
                           <div className='text-sm font-semibold'>
-                            {formatCurrencyFromUSD(record.amount, {
-                              digitsLarge: 2,
-                              digitsSmall: 2,
-                              abbreviate: false,
-                            })}
+                            {isStripeRecord ? (
+                              formatBillingCurrencyFromUSD(paymentAmount, {
+                                digitsLarge: 2,
+                                digitsSmall: 2,
+                                abbreviate: false,
+                              })
+                            ) : (
+                              <>
+                                {formatNumber(paymentAmount)} {t('USD')}
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className='space-y-1'>
                           <Label className='text-muted-foreground text-xs'>
-                            {t('Payment')}
+                            {t('Credits received')}
                           </Label>
-                          <div className='text-sm font-semibold text-red-600'>
-                            {formatNumber(record.money)}
+                          <div className='text-sm font-semibold text-emerald-600'>
+                            {formatNumber(creditedAmount)} {t('credits')}
                           </div>
                         </div>
                       </div>
