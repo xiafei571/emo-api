@@ -25,6 +25,16 @@ export const STATIC_I18N_KEYS = [
   'Model Square',
   'Rankings',
   'Docs',
+  'Better prices · Better uptime · No subscriptions',
+  'Mainstream AI models,',
+  'starting at 10–20% of official prices',
+  'Unified API access to Claude, GPT, Gemini, and other leading models. Low-cost, stable, and secure, with major API compatibility for fast migration.',
+  'Create an account',
+  'Sign up in seconds and get access to the EMO API workspace.',
+  'Buy credits',
+  'Add credits in USD and use them across supported AI models.',
+  'Get your API key',
+  'Create an API key and start making requests with familiar API formats.',
   'About',
 
   // Sidebar views (drill-in workspaces)
