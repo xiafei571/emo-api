@@ -68,8 +68,18 @@ function OAuthCallback() {
     flow_token?: string
     error_code?: string
   }
-  const mode: 'login' | 'bind' =
-    typeof window !== 'undefined' && window.opener ? 'bind' : 'login'
+  // Some mobile in-app browsers keep an opener from the host application
+  // even when OAuth was started as a normal same-page login. Only a same-
+  // origin opener can be our account-binding popup.
+  const hasSameOriginOpener = () => {
+    if (typeof window === 'undefined' || !window.opener) return false
+    try {
+      return window.opener.location.origin === window.location.origin
+    } catch {
+      return false
+    }
+  }
+  const mode: 'login' | 'bind' = hasSameOriginOpener() ? 'bind' : 'login'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
