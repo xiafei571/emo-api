@@ -36,7 +36,9 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'en',
+    // Japanese is the public site's default when there is no explicit URL or
+    // previously saved language selection.
+    fallbackLng: 'ja',
     supportedLngs: ['en', 'zhCN', 'ja'],
     load: 'currentOnly',
     nsSeparator: false, // Allow literal colons in keys (e.g., URLs, labels)
@@ -45,7 +47,7 @@ i18n
       escapeValue: false, // not needed for react as it escapes by default
     },
     detection: {
-      order: ['querystring', 'localStorage', 'navigator'],
+      order: ['querystring', 'localStorage'],
       lookupQuerystring: 'lang',
       caches: ['localStorage'],
       // Map every browser-reported Chinese variant onto Simplified Chinese.
