@@ -193,7 +193,7 @@ export function DiscountModels() {
                   <h2 className='text-xl font-semibold leading-none tracking-tight'>
                     {section.group}
                   </h2>
-                  <span className='text-primary text-sm font-semibold leading-none'>
+                  <span className='text-primary text-lg leading-none font-bold'>
                     {formatRatio(language, section.ratio, text.official)}
                   </span>
                 </div>
