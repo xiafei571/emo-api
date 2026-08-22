@@ -45,7 +45,8 @@ i18n
       escapeValue: false, // not needed for react as it escapes by default
     },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['querystring', 'localStorage', 'navigator'],
+      lookupQuerystring: 'lang',
       caches: ['localStorage'],
       // Map every browser-reported Chinese variant onto Simplified Chinese.
       convertDetectedLanguage,

@@ -42,6 +42,9 @@ export function LanguageSwitcher() {
   const handleChangeLanguage = useCallback(
     async (code: string) => {
       await i18n.changeLanguage(code)
+      const url = new URL(window.location.href)
+      url.searchParams.set('lang', code)
+      window.history.replaceState(window.history.state, '', url)
       if (user) {
         try {
           await api.put('/api/user/self', { language: code })
