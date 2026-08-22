@@ -50,6 +50,14 @@ export const api = axios.create({
 })
 
 const inFlightGet = new Map<string, Promise<unknown>>()
+const SESSION_EXPIRED_TOAST_ID = 'session-expired'
+
+function notifySessionExpired(): void {
+  toast.error(t('Session expired!'), {
+    id: SESSION_EXPIRED_TOAST_ID,
+  })
+}
+
 const originalGet = api.get.bind(api)
 
 api.get = ((url: string, config: ApiRequestConfig = {}) => {
@@ -118,15 +126,15 @@ api.interceptors.response.use(
         }
 
         if (outcome.kind === 'anonymous' || outcome.kind === 'out_of_sync') {
-          if (!skipErrorHandler) toast.error(t('Session expired!'))
+          if (!skipErrorHandler) notifySessionExpired()
           redirectToSignIn()
         }
       } else if (config?.authRetry) {
         clearAuthentication(false)
-        if (!skipErrorHandler) toast.error(t('Session expired!'))
+        if (!skipErrorHandler) notifySessionExpired()
         redirectToSignIn()
       } else if (!skipErrorHandler) {
-        toast.error(t('Session expired!'))
+        notifySessionExpired()
       }
     } else if (!skipErrorHandler) {
       const messageKey = getServerErrorMessageKey(error)

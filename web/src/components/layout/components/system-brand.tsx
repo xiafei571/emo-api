@@ -53,7 +53,10 @@ export function SystemBrand(props: SystemBrandProps) {
   const variant = props.variant ?? 'sidebar'
   const name = status?.system_name || props.defaultName || 'New API'
   const version =
-    status?.version || props.defaultVersion || t('Unknown version')
+    status?.version ||
+    props.defaultVersion ||
+    import.meta.env.VITE_REACT_APP_VERSION ||
+    t('Unknown version')
 
   if (variant === 'inline') {
     return (
@@ -73,6 +76,9 @@ export function SystemBrand(props: SystemBrandProps) {
           />
         </div>
         <span className='max-w-[12rem] truncate'>{name}</span>
+        <span className='text-muted-foreground/60 shrink-0 text-[10px] font-normal'>
+          v{version.replace(/^v/i, '')}
+        </span>
       </Link>
     )
   }

@@ -38,6 +38,7 @@ import type { TopNavLink } from '../types'
 import { HeaderLogo } from './header-logo'
 
 const AUTH_PROMPT_SECONDS = 5
+const APP_VERSION = import.meta.env.VITE_REACT_APP_VERSION
 
 type AuthPromptTarget = {
   title: string
@@ -209,9 +210,20 @@ export function PublicHeader(props: PublicHeaderProps) {
                   />
                 )}
               </div>
-              <span className='text-sm font-semibold tracking-tight'>
-                {loading ? <Skeleton className='h-4 w-16' /> : displaySiteName}
-              </span>
+              <div className='flex min-w-0 items-baseline gap-1.5'>
+                <span className='truncate text-sm font-semibold tracking-tight'>
+                  {loading ? (
+                    <Skeleton className='h-4 w-16' />
+                  ) : (
+                    displaySiteName
+                  )}
+                </span>
+                {APP_VERSION && (
+                  <span className='text-muted-foreground/60 shrink-0 text-[10px] font-normal tracking-normal'>
+                    v{APP_VERSION}
+                  </span>
+                )}
+              </div>
             </Link>
 
             {/* Desktop nav */}
