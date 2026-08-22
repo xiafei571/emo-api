@@ -33,7 +33,7 @@ func filterPricingByUsableGroups(pricing []model.Pricing, usableGroup map[string
 	return filtered
 }
 
-func getPricingResponse(c *gin.Context) gin.H {
+func getPricingResponse(c *gin.Context, filterByUser bool) gin.H {
 	pricing := model.GetPricing()
 	userId, exists := c.Get("id")
 	usableGroup := map[string]string{}
@@ -56,7 +56,9 @@ func getPricingResponse(c *gin.Context) gin.H {
 	}
 
 	usableGroup = service.GetUserUsableGroups(group)
-	pricing = filterPricingByUsableGroups(pricing, usableGroup)
+	if filterByUser {
+		pricing = filterPricingByUsableGroups(pricing, usableGroup)
+	}
 	// check groupRatio contains usableGroup
 	for group := range ratio_setting.GetGroupRatioCopy() {
 		if _, ok := usableGroup[group]; !ok {
@@ -77,13 +79,15 @@ func getPricingResponse(c *gin.Context) gin.H {
 }
 
 func GetPricing(c *gin.Context) {
-	c.JSON(200, getPricingResponse(c))
+	c.JSON(200, getPricingResponse(c, true))
 }
 
 // GetDiscountPricing exposes the same model data for the public discount page.
 // It intentionally does not depend on the optional pricing navigation module.
 func GetDiscountPricing(c *gin.Context) {
-	c.JSON(200, getPricingResponse(c))
+	// The public page is an overview of all advertised discounts, so it must
+	// not be narrowed to the anonymous user's default group.
+	c.JSON(200, getPricingResponse(c, false))
 }
 
 func ResetModelRatio(c *gin.Context) {

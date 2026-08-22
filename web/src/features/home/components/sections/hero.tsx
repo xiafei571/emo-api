@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 
 import { GettingStartedSteps } from '../getting-started-steps'
-import { HeroTerminalDemo } from '../hero-terminal-demo'
+import { HeroModelWall } from '../hero-model-wall'
 
 interface HeroProps {
   className?: string
@@ -129,12 +129,12 @@ export function Hero(props: HeroProps) {
           </div>
         </div>
 
-        {/* Right Column: Hero Terminal API Demo */}
+        {/* Right Column: Model Square preview */}
         <div
           className='landing-animate-fade-up flex w-full justify-center opacity-0 lg:col-span-6'
           style={{ animationDelay: '320ms' }}
         >
-          <HeroTerminalDemo className='mt-8 lg:mt-0' />
+          <HeroModelWall className='mt-8 lg:mt-0' />
         </div>
       </div>
       <GettingStartedSteps />

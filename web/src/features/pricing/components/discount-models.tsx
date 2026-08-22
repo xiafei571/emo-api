@@ -6,16 +6,20 @@ it under the terms of the GNU Affero General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
 */
-import { ArrowRight, Check, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from '@tanstack/react-router'
 
 import { PublicLayout } from '@/components/layout'
 import { PageTransition } from '@/components/page-transition'
+import { normalizeInterfaceLanguage } from '@/i18n/languages'
+import { getPerfMetricsSummary } from '@/features/performance-metrics/api'
+import { getSuccessRateDotClass } from '@/features/performance-metrics/lib/format'
 import { getLobeIcon } from '@/lib/lobe-icon'
 
 import { usePricingData } from '../hooks/use-pricing-data'
+import { getDisplayGroupRatio } from '../lib/model-helpers'
 
 type DiscountCopy = {
   title: string
@@ -25,6 +29,7 @@ type DiscountCopy = {
   docs: string
   note: string
   badge: string
+  aiModel: string
   categories: Record<string, string>
 }
 
@@ -32,12 +37,13 @@ const copy: Record<string, DiscountCopy> = {
   zh: {
     title: '折扣 AI 模型',
     subtitle:
-      '以官方价格 2–4 折使用 GPT、Claude、Gemini、DeepSeek 和 KIMI 等模型。',
+      '以低于官方价格的优惠价格使用 GPT、Claude、Gemini、DeepSeek 和 KIMI 等模型。',
     official: '官方价',
     savings: '节省',
     docs: '查看文档',
     note: '价格以当前用户组和实际模型配置为准。',
     badge: '限时优惠',
+    aiModel: 'AI 模型',
     categories: {
       GPT: 'GPT',
       Claude: 'Claude',
@@ -49,12 +55,13 @@ const copy: Record<string, DiscountCopy> = {
   en: {
     title: 'Discounted AI Models',
     subtitle:
-      'Use GPT, Claude, Gemini, DeepSeek and KIMI at 20%–40% of official prices.',
+      'Use GPT, Claude, Gemini, DeepSeek and KIMI at prices below the official rates.',
     official: 'Official price',
     savings: 'Save',
     docs: 'View docs',
     note: 'Pricing depends on your user group and the selected model configuration.',
     badge: 'Discount',
+    aiModel: 'AI model',
     categories: {
       GPT: 'GPT',
       Claude: 'Claude',
@@ -66,12 +73,13 @@ const copy: Record<string, DiscountCopy> = {
   ja: {
     title: '割引 AI モデル',
     subtitle:
-      'GPT、Claude、Gemini、DeepSeek、KIMI などを公式価格の 20〜40% で利用できます。',
+      'GPT、Claude、Gemini、DeepSeek、KIMI などを公式価格より安く利用できます。',
     official: '公式価格',
     savings: 'お得',
     docs: 'ドキュメントを見る',
     note: '料金はユーザーグループとモデル設定によって異なります。',
     badge: '割引',
+    aiModel: 'AI モデル',
     categories: {
       GPT: 'GPT',
       Claude: 'Claude',
@@ -85,7 +93,8 @@ const copy: Record<string, DiscountCopy> = {
 const categoryOrder = ['GPT', 'Claude', 'Gemini', 'DeepSeek', 'KIMI']
 
 function getCopy(language: string) {
-  return copy[language.split('-')[0]] ?? copy.en
+  const normalized = normalizeInterfaceLanguage(language)
+  return copy[normalized === 'zhCN' ? 'zh' : normalized] ?? copy.en
 }
 
 function getCategory(modelName: string) {
@@ -98,28 +107,58 @@ function getCategory(modelName: string) {
   return null
 }
 
+function formatRatio(language: string, ratio: number, official: string) {
+  const percentage = Math.round(ratio * 100)
+  const normalized = normalizeInterfaceLanguage(language)
+  if (normalized === 'zhCN') return `${official} ${Math.round(ratio * 10)}折`
+  if (normalized === 'ja') return `公式価格の ${percentage}%`
+  return `${percentage}% of official price`
+}
+
 export function DiscountModels() {
   const { i18n } = useTranslation()
-  const { models, isLoading } = usePricingData('/api/discount-pricing')
-  const text = getCopy(i18n.language)
+  const { models, groupRatio, isLoading } = usePricingData('/api/discount-pricing')
+  const perfQuery = useQuery({
+    queryKey: ['perf-metrics-summary', 24],
+    queryFn: () => getPerfMetricsSummary(24),
+    staleTime: 60 * 1000,
+    retry: false,
+  })
+  const text = getCopy(i18n.resolvedLanguage ?? i18n.language)
+  const language = i18n.resolvedLanguage ?? i18n.language
+  const perfMap = useMemo(
+    () => new Map((perfQuery.data?.data?.models ?? []).map((item) => [item.model_name, item])),
+    [perfQuery.data]
+  )
 
   useEffect(() => {
     document.title = `${text.title} | EMO API`
   }, [text.title])
 
-  const discountedModels = useMemo(() => {
-    return (models || [])
-      .map((model) => ({ ...model, category: getCategory(model.model_name) }))
-      .filter(
-        (model) =>
-          model.category && model.model_ratio > 0 && model.model_ratio <= 0.4
-      )
-      .sort((a, b) => {
-        const categoryDiff =
-          categoryOrder.indexOf(a.category!) - categoryOrder.indexOf(b.category!)
-        return categoryDiff || a.model_ratio - b.model_ratio
-      })
-  }, [models])
+  const discountedGroups = useMemo(() => {
+    return Object.entries(groupRatio)
+      .filter(([, ratio]) => ratio > 0 && ratio < 1)
+      .map(([group, ratio]) => ({
+        group,
+        ratio,
+        models: (models || [])
+          .filter((model) => model.enable_groups?.includes(group))
+          .map((model) => ({
+            ...model,
+            category: getCategory(model.model_name),
+            displayRatio: getDisplayGroupRatio(model, group),
+          }))
+          .filter((model) => model.displayRatio > 0 && model.displayRatio < 1)
+          .sort((a, b) => {
+            const categoryDiff =
+              (a.category ? categoryOrder.indexOf(a.category) : categoryOrder.length) -
+              (b.category ? categoryOrder.indexOf(b.category) : categoryOrder.length)
+            return categoryDiff || a.model_name.localeCompare(b.model_name)
+          }),
+      }))
+      .filter((section) => section.models.length > 0)
+      .sort((a, b) => a.ratio - b.ratio)
+  }, [groupRatio, models])
 
   return (
     <PublicLayout showMainContainer={false}>
@@ -147,70 +186,71 @@ export function DiscountModels() {
             ))}
           </div>
         ) : (
-          <div className='mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-            {discountedModels.map((model) => {
-              const ratio = model.model_ratio
-              const discount = Math.round((1 - ratio) * 100)
-              const iconKey = model.icon || model.vendor_icon
-              const icon = iconKey ? getLobeIcon(iconKey, 28) : null
-
-              return (
-                <article
-                  key={model.model_name}
-                  className='group bg-background relative flex min-h-52 flex-col rounded-2xl border p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md'
-                >
-                  <div className='flex items-start justify-between gap-3'>
-                    <div className='flex min-w-0 items-center gap-3'>
-                      <div className='bg-muted/60 flex size-11 shrink-0 items-center justify-center rounded-xl'>
-                        {icon || (
-                          <span className='text-muted-foreground font-semibold'>
-                            {model.model_name.charAt(0)}
-                          </span>
-                        )}
-                      </div>
-                      <div className='min-w-0'>
-                        <h2 className='truncate font-mono text-lg font-semibold'>
-                          {model.model_name}
-                        </h2>
-                        <p className='text-muted-foreground text-sm'>
-                          {text.categories[model.category!] || model.category}
-                        </p>
-                      </div>
-                    </div>
-                    <span className='bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold'>
-                      {text.official} {Math.round(ratio * 10)}折
-                    </span>
-                  </div>
-
-                  <div className='mt-auto pt-8'>
-                    <div className='flex items-end justify-between gap-3'>
-                      <div>
-                        <p className='text-muted-foreground text-sm'>
-                          {text.savings} {discount}%
-                        </p>
-                        <p className='mt-1 text-2xl font-bold'>
-                          {Math.round(ratio * 100)}%
-                          <span className='text-muted-foreground ml-1 text-sm font-normal'>
-                            {text.official}
-                          </span>
-                        </p>
-                      </div>
-                      <Link
-                        to='/guide'
-                        className='text-primary inline-flex items-center gap-1 text-sm font-medium hover:underline'
+          <div className='mt-12 space-y-10'>
+            {discountedGroups.map((section) => (
+              <section key={section.group}>
+                <div className='mb-4 flex items-baseline gap-3'>
+                  <h2 className='text-xl font-semibold leading-none tracking-tight'>
+                    {section.group}
+                  </h2>
+                  <span className='text-primary text-sm font-semibold leading-none'>
+                    {formatRatio(language, section.ratio, text.official)}
+                  </span>
+                </div>
+                <div className='grid grid-cols-1 gap-3 pb-2 sm:grid-cols-[repeat(2,minmax(0,280px))] lg:grid-cols-[repeat(4,minmax(0,280px))]'>
+                  {section.models.map((model) => {
+                    const iconKey = model.icon || model.vendor_icon
+                    return (
+                      <article
+                        key={`${section.group}-${model.model_name}`}
+                        className='bg-background flex h-[72px] w-full items-center gap-2.5 rounded-xl border p-2.5 shadow-sm transition-colors hover:border-primary/50'
                       >
-                        {text.docs}
-                        <ArrowRight className='size-4 transition-transform group-hover:translate-x-0.5' />
-                      </Link>
-                    </div>
-                    <div className='text-muted-foreground mt-4 flex items-center gap-1.5 border-t pt-3 text-xs'>
-                      <Check className='size-3.5 text-emerald-500' />
-                      {text.note}
-                    </div>
-                  </div>
-                </article>
-              )
-            })}
+                        <div className='bg-muted/60 flex size-9 shrink-0 items-center justify-center rounded-lg'>
+                          {iconKey ? getLobeIcon(iconKey, 28) : model.model_name.charAt(0)}
+                        </div>
+                        <div className='min-w-0'>
+                          <h3 className='truncate font-mono text-sm font-semibold'>
+                            {model.model_name}
+                          </h3>
+                          <p className='text-muted-foreground mt-1 text-xs'>
+                            {(() => {
+                              const rate = perfMap.get(model.model_name)?.success_rate
+                              const hasRate =
+                                typeof rate === 'number' && Number.isFinite(rate)
+                              const recentRates = perfMap.get(model.model_name)?.recent_success_rates ?? []
+                              const signalRates = (
+                                recentRates.length > 0
+                                  ? recentRates.slice(-3)
+                                  : hasRate
+                                    ? [rate]
+                                    : []
+                              ).slice(-3)
+                              const signalBars = [
+                                ...Array(Math.max(0, 3 - signalRates.length)).fill(null),
+                                ...signalRates,
+                              ]
+                              return (
+                                <span className='inline-flex items-center gap-1.5'>
+                                  <span className='flex h-3 items-end gap-0.5'>
+                                    {signalBars.map((value, index) => (
+                                      <span
+                                        key={`${model.model_name}-signal-${index}`}
+                                        className={`w-1 rounded-full ${index === 0 ? 'h-2' : index === 1 ? 'h-2.5' : 'h-3'} ${value == null ? 'bg-muted-foreground/15' : getSuccessRateDotClass(value)}`}
+                                      />
+                                    ))}
+                                  </span>
+                                  {hasRate ? `${rate.toFixed(1)}%` : '—'}
+                                </span>
+                              )
+                            })()}
+                          </p>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </PageTransition>
