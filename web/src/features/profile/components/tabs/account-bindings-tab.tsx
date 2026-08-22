@@ -30,6 +30,7 @@ import { Separator } from '@/components/ui/separator'
 import { createOAuthFlow } from '@/features/auth/api'
 import {
   OAUTH_BIND_CALLBACK_MESSAGE,
+  OAUTH_BIND_PENDING_STORAGE_KEY,
   OAUTH_BIND_RESULT_MESSAGE,
 } from '@/features/auth/constants'
 import { watchOAuthPopupClosed } from '@/features/auth/lib/oauth-bind-window'
@@ -176,6 +177,10 @@ export function AccountBindingsTab({
         const state = await createOAuthFlow(provider, 'bind')
         if (pendingOAuthBinding.current !== pending || popup.closed) return
         pending.state = state
+        window.localStorage.setItem(
+          OAUTH_BIND_PENDING_STORAGE_KEY,
+          `${provider}:${state}`
+        )
         popup.location.replace(buildUrl(state))
       } catch {
         const isCurrent = pendingOAuthBinding.current === pending

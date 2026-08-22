@@ -30,6 +30,7 @@ import { toast } from 'sonner'
 import { OAuthCallbackScreen } from '@/features/auth/components/oauth-callback-screen'
 import {
   OAUTH_BIND_CALLBACK_MESSAGE,
+  OAUTH_BIND_PENDING_STORAGE_KEY,
   OAUTH_BIND_RESULT_MESSAGE,
 } from '@/features/auth/constants'
 import { sanitizeAuthRedirect } from '@/features/auth/lib/auth-redirect'
@@ -68,18 +69,15 @@ function OAuthCallback() {
     flow_token?: string
     error_code?: string
   }
-  // Some mobile in-app browsers keep an opener from the host application
-  // even when OAuth was started as a normal same-page login. Only a same-
-  // origin opener can be our account-binding popup.
-  const hasSameOriginOpener = () => {
-    if (typeof window === 'undefined' || !window.opener) return false
-    try {
-      return window.opener.location.origin === window.location.origin
-    } catch {
-      return false
-    }
-  }
-  const mode: 'login' | 'bind' = hasSameOriginOpener() ? 'bind' : 'login'
+  // Do not infer the flow from window.opener: mobile in-app browsers may keep
+  // an opener for ordinary login. Binding explicitly records provider+state.
+  const mode: 'login' | 'bind' =
+    typeof window !== 'undefined' &&
+    window.opener &&
+    window.localStorage.getItem(OAUTH_BIND_PENDING_STORAGE_KEY) ===
+      `${provider}:${search.state ?? ''}`
+      ? 'bind'
+      : 'login'
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -117,6 +115,8 @@ function OAuthCallback() {
         toast.error(i18next.t('OAuth binding window is no longer available'))
         return
       }
+
+      window.localStorage.removeItem(OAUTH_BIND_PENDING_STORAGE_KEY)
 
       let cancelResultTimeout: () => void = () => undefined
       let delayedClose: number | undefined
