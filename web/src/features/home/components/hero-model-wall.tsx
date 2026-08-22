@@ -31,24 +31,21 @@ export function HeroModelWall(props: HeroModelWallProps) {
 
   return (
     <div className={cn('mx-auto w-full max-w-2xl', props.className)}>
-      <div className='border-border/60 bg-white/90 relative h-[460px] overflow-hidden rounded-2xl border p-6 shadow-[0_20px_50px_-25px_rgba(15,23,42,0.18)] backdrop-blur-sm dark:border-white/[0.06] dark:bg-[#0b0f17]/90 dark:shadow-[0_20px_60px_-25px_rgba(0,0,0,0.7)]'>
-        <div className='flex items-center justify-between'>
+      <div className='border-border/60 bg-white/90 relative h-[520px] overflow-hidden rounded-2xl border p-5 shadow-[0_20px_50px_-25px_rgba(15,23,42,0.18)] backdrop-blur-sm sm:h-[460px] sm:p-6 dark:border-white/[0.06] dark:bg-[#0b0f17]/90 dark:shadow-[0_20px_60px_-25px_rgba(0,0,0,0.7)]'>
+        <div className='flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-0'>
           <div>
             <p className='text-muted-foreground text-xs font-medium tracking-[0.18em] uppercase'>
               {t('Model Square')}
             </p>
-            <h2 className='mt-1 text-xl font-semibold tracking-tight'>
+            <h2 className='mt-1 text-lg leading-snug font-semibold tracking-tight sm:text-xl'>
               {t('All your favorite models in one place')}
             </h2>
           </div>
-          <span className='bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full px-2.5 py-1 text-xs font-medium'>
-            {models?.length || 0}+
-          </span>
         </div>
 
         <div className='from-background pointer-events-none absolute inset-x-0 top-20 z-10 h-8 bg-gradient-to-b to-transparent' />
-        <div className='relative mt-6'>
-          <div className='scrollbar-thin grid max-h-[260px] grid-cols-2 gap-2.5 overflow-y-auto pb-16 pr-1 sm:grid-cols-3'>
+        <div className='relative mt-4 sm:mt-6'>
+          <div className='scrollbar-thin grid max-h-[300px] grid-cols-2 gap-2.5 overflow-y-auto pb-20 pr-1 sm:max-h-[260px] sm:pb-16 sm:grid-cols-3'>
           {isLoading
             ? Array.from({ length: 18 }, (_, index) => (
                 <div
