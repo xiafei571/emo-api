@@ -24,6 +24,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/oauth"
 	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
+	"github.com/QuantumNous/new-api/pkg/tracearchive"
 	"github.com/QuantumNous/new-api/relay"
 	kitutil "github.com/QuantumNous/new-api/relaykit/relayconvert/kitutil"
 	"github.com/QuantumNous/new-api/router"
@@ -175,6 +176,23 @@ func main() {
 	err = common.StartPyroScope()
 	if err != nil {
 		common.SysError(fmt.Sprintf("start pyroscope error : %v", err))
+	}
+
+	archiveConfig, err := tracearchive.ConfigFromEnv()
+	if err != nil {
+		common.FatalLog("invalid trace archive configuration: " + err.Error())
+		return
+	}
+	if archiveConfig.Enabled {
+		archive, err := tracearchive.Open(archiveConfig, tracearchive.NewS3Uploader(archiveConfig))
+		if err != nil {
+			common.FatalLog("failed to initialize trace archive: " + err.Error())
+			return
+		}
+		middleware.AgentTraceArchive = archive
+		archive.Start()
+		defer archive.Close()
+		common.SysLog("trace_archive enabled: HTTP client request/response capture")
 	}
 
 	// Initialize HTTP server

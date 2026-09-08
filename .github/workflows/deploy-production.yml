@@ -104,6 +104,8 @@ jobs:
     env:
       VERSION: ${{ needs.version-gate.outputs.version }}
       IMAGE: asia-northeast1-docker.pkg.dev/semo-ai-503410/semo-api/new-api
+      TRACE_ARCHIVE_ACCESS_KEY_ID_VALUE: ${{ secrets.TRACE_ARCHIVE_ACCESS_KEY_ID }}
+      TRACE_ARCHIVE_SECRET_ACCESS_KEY_VALUE: ${{ secrets.TRACE_ARCHIVE_SECRET_ACCESS_KEY }}
 
     steps:
       - name: Check out release commit
@@ -122,6 +124,48 @@ jobs:
 
       - name: Configure Artifact Registry authentication
         run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Configure trace archive secrets
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$TRACE_ARCHIVE_ACCESS_KEY_ID_VALUE" || -z "$TRACE_ARCHIVE_SECRET_ACCESS_KEY_VALUE" ]]; then
+            echo "::error::Trace archive repository secrets are missing"
+            exit 1
+          fi
+
+          runtime_service_account="$(
+            gcloud run services describe "$SERVICE_NAME" \
+              --project="$PROJECT_ID" \
+              --region="$REGION" \
+              --format='value(spec.template.spec.serviceAccountName)'
+          )"
+          if [[ -z "$runtime_service_account" ]]; then
+            runtime_service_account="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
+          fi
+
+          add_secret_version() {
+            local name="$1"
+            local value="$2"
+            if ! gcloud secrets describe "$name" --project="$PROJECT_ID" >/dev/null 2>&1; then
+              gcloud secrets create "$name" \
+                --project="$PROJECT_ID" \
+                --replication-policy=automatic \
+                --quiet
+            fi
+            printf '%s' "$value" | gcloud secrets versions add "$name" \
+              --project="$PROJECT_ID" \
+              --data-file=- \
+              --quiet
+            gcloud secrets add-iam-policy-binding "$name" \
+              --project="$PROJECT_ID" \
+              --member="serviceAccount:${runtime_service_account}" \
+              --role='roles/secretmanager.secretAccessor' \
+              --quiet >/dev/null
+          }
+
+          add_secret_version 'semo-api-trace-archive-access-key-id' "$TRACE_ARCHIVE_ACCESS_KEY_ID_VALUE"
+          add_secret_version 'semo-api-trace-archive-secret-access-key' "$TRACE_ARCHIVE_SECRET_ACCESS_KEY_VALUE"
 
       - name: Reuse an existing immutable version image
         id: existing
@@ -205,6 +249,8 @@ jobs:
             --region="$REGION" \
             --image="$RELEASE_IMAGE" \
             --remove-env-vars="VERSION" \
+            --update-env-vars="TRACE_ARCHIVE_ENABLED=true,TRACE_ARCHIVE_SPOOL_DIR=/tmp/agent-traces,TRACE_ARCHIVE_BUCKET=semo-agent-traces-477075396603-apne1,TRACE_ARCHIVE_PREFIX=raw/v1,TRACE_ARCHIVE_REGION=ap-northeast-1,TRACE_ARCHIVE_WORKERS=2,TRACE_ARCHIVE_MAX_REQUEST_MB=16,TRACE_ARCHIVE_MAX_SPOOL_MB=256,TRACE_ARCHIVE_SCAN_SECONDS=1,TRACE_ARCHIVE_UPLOAD_TIMEOUT_SECONDS=120" \
+            --update-secrets="TRACE_ARCHIVE_ACCESS_KEY_ID=semo-api-trace-archive-access-key-id:latest,TRACE_ARCHIVE_SECRET_ACCESS_KEY=semo-api-trace-archive-secret-access-key:latest" \
             --update-labels="release-version=${VERSION//./-},release-sha=${GITHUB_SHA:0:12}" \
             --quiet
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
+	"github.com/QuantumNous/new-api/pkg/tracearchive"
 	"github.com/QuantumNous/new-api/types"
 
 	"github.com/gin-gonic/gin"
@@ -341,6 +342,13 @@ type RecordConsumeLogParams struct {
 }
 
 func RecordConsumeLog(c *gin.Context, userId int, params RecordConsumeLogParams) {
+	if c != nil {
+		if value, exists := c.Get(tracearchive.ContextKey); exists {
+			if recorder, ok := value.(*tracearchive.Recorder); ok {
+				recorder.SetUsage(tracearchive.Usage{PromptTokens: params.PromptTokens, CompletionTokens: params.CompletionTokens, Quota: params.Quota})
+			}
+		}
+	}
 	if !common.LogConsumeEnabled {
 		return
 	}
