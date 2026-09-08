@@ -162,6 +162,11 @@ jobs:
               --member="serviceAccount:${runtime_service_account}" \
               --role='roles/secretmanager.secretAccessor' \
               --quiet >/dev/null
+            gcloud secrets add-iam-policy-binding "$name" \
+              --project="$PROJECT_ID" \
+              --member="serviceAccount:${DEPLOYER_SERVICE_ACCOUNT}" \
+              --role='roles/secretmanager.secretAccessor' \
+              --quiet >/dev/null
           }
 
           add_secret_version 'semo-api-trace-archive-access-key-id' "$TRACE_ARCHIVE_ACCESS_KEY_ID_VALUE"
