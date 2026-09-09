@@ -13,7 +13,10 @@ import (
 	"path/filepath"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -60,6 +63,22 @@ func TestS3SignedPutChecksumAndNoRedirect(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	require.Error(t, u.Upload(ctx, key, file))
+}
+
+func TestSignS3RequestUsesStandardPathEscaping(t *testing.T) {
+	const target = "https://s3.us-east-1.amazonaws.com/test-bucket/raw/v1/user=1/session=test/date=2026-09-09/request.jsonl.gz"
+	const payloadHash = "d039141f2ff4fdb8f3353d7836193293677127535438e103fc60c09a4d42d9e7"
+	credentials := aws.Credentials{AccessKeyID: "test", SecretAccessKey: "secret"}
+	signedAt := time.Date(2026, 9, 9, 2, 17, 37, 0, time.UTC)
+	standard, err := http.NewRequest(http.MethodPut, target, nil)
+	require.NoError(t, err)
+	require.NoError(t, signS3Request(context.Background(), v4.NewSigner(), credentials, standard, payloadHash, "us-east-1", signedAt))
+	disabled, err := http.NewRequest(http.MethodPut, target, nil)
+	require.NoError(t, err)
+	require.NoError(t, v4.NewSigner().SignHTTP(context.Background(), credentials, disabled, payloadHash, "s3", "us-east-1", signedAt, func(options *v4.SignerOptions) {
+		options.DisableURIPathEscaping = true
+	}))
+	assert.NotEqual(t, disabled.Header.Get("Authorization"), standard.Header.Get("Authorization"), "keys containing '=' require standard SigV4 path escaping")
 }
 
 func TestS3UploadReportsSafeServiceError(t *testing.T) {

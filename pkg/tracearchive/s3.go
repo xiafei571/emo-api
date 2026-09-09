@@ -71,7 +71,7 @@ func (u *s3Uploader) Upload(ctx context.Context, key, filename string) error {
 	payloadHash := hex.EncodeToString(hash.Sum(nil))
 	req.Header.Set("x-amz-content-sha256", payloadHash)
 	credentials := aws.Credentials{AccessKeyID: u.cfg.AccessKey, SecretAccessKey: u.cfg.SecretKey, SessionToken: u.cfg.SessionToken}
-	if err = u.signer.SignHTTP(ctx, credentials, req, payloadHash, "s3", u.cfg.Region, time.Now(), func(o *v4.SignerOptions) { o.DisableURIPathEscaping = true }); err != nil {
+	if err = signS3Request(ctx, u.signer, credentials, req, payloadHash, u.cfg.Region, time.Now()); err != nil {
 		return err
 	}
 	resp, err := u.client.Do(req)
@@ -92,4 +92,8 @@ func (u *s3Uploader) Upload(ctx context.Context, key, filename string) error {
 		return fmt.Errorf("S3 PUT status=%d", resp.StatusCode)
 	}
 	return nil
+}
+
+func signS3Request(ctx context.Context, signer *v4.Signer, credentials aws.Credentials, req *http.Request, payloadHash, region string, signedAt time.Time) error {
+	return signer.SignHTTP(ctx, credentials, req, payloadHash, "s3", region, signedAt)
 }
