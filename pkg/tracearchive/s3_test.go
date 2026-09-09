@@ -61,3 +61,20 @@ func TestS3SignedPutChecksumAndNoRedirect(t *testing.T) {
 	cancel()
 	require.Error(t, u.Upload(ctx, key, file))
 }
+
+func TestS3UploadReportsSafeServiceError(t *testing.T) {
+	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = w.Write([]byte(`<Error><Code>InvalidAccessKeyId</Code><Message>sensitive detail</Message><RequestId>request-123</RequestId></Error>`))
+	}))
+	defer s.Close()
+	cfg := testConfig(t)
+	cfg.Endpoint = s.URL
+	u := NewS3Uploader(cfg).(*s3Uploader)
+	u.client.Transport = s.Client().Transport
+	file := filepath.Join(t.TempDir(), "request.jsonl.gz")
+	require.NoError(t, os.WriteFile(file, []byte("payload"), 0600))
+	err := u.Upload(context.Background(), "request.jsonl.gz", file)
+	require.ErrorContains(t, err, "status=403 code=InvalidAccessKeyId request_id=request-123")
+	assert.NotContains(t, err.Error(), "sensitive detail")
+}

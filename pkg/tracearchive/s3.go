@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"net/http"
@@ -78,8 +79,16 @@ func (u *s3Uploader) Upload(ctx context.Context, key, filename string) error {
 		return fmt.Errorf("S3 PUT transport failed")
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var serviceError struct {
+			Code      string `xml:"Code"`
+			RequestID string `xml:"RequestId"`
+		}
+		_ = xml.Unmarshal(body, &serviceError)
+		if serviceError.Code != "" || serviceError.RequestID != "" {
+			return fmt.Errorf("S3 PUT status=%d code=%s request_id=%s", resp.StatusCode, serviceError.Code, serviceError.RequestID)
+		}
 		return fmt.Errorf("S3 PUT status=%d", resp.StatusCode)
 	}
 	return nil
