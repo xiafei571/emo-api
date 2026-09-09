@@ -253,6 +253,7 @@ jobs:
             --project="$PROJECT_ID" \
             --region="$REGION" \
             --image="$RELEASE_IMAGE" \
+            --no-cpu-throttling \
             --remove-env-vars="VERSION" \
             --update-env-vars="TRACE_ARCHIVE_ENABLED=true,TRACE_ARCHIVE_SPOOL_DIR=/tmp/agent-traces,TRACE_ARCHIVE_BUCKET=semo-agent-traces-477075396603-apne1,TRACE_ARCHIVE_PREFIX=raw/v1,TRACE_ARCHIVE_REGION=ap-northeast-1,TRACE_ARCHIVE_WORKERS=2,TRACE_ARCHIVE_MAX_REQUEST_MB=16,TRACE_ARCHIVE_MAX_SPOOL_MB=256,TRACE_ARCHIVE_SCAN_SECONDS=1,TRACE_ARCHIVE_UPLOAD_TIMEOUT_SECONDS=120" \
             --update-secrets="TRACE_ARCHIVE_ACCESS_KEY_ID=semo-api-trace-archive-access-key-id:latest,TRACE_ARCHIVE_SECRET_ACCESS_KEY=semo-api-trace-archive-secret-access-key:latest" \
