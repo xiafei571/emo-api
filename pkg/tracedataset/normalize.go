@@ -26,7 +26,7 @@ func normalizeRequest(_ string, payload Payload) ([]Message, []Tool) {
 		for _, item := range raw {
 			messages = append(messages, normalizeMessage(item)...)
 		}
-		return messages, tools
+		return markMessageOrigin(messages, "client_context"), tools
 	}
 	if input, exists := root["input"]; exists {
 		if text, ok := input.(string); ok {
@@ -36,20 +36,20 @@ func normalizeRequest(_ string, payload Payload) ([]Message, []Tool) {
 				messages = append(messages, normalizeMessage(item)...)
 			}
 		}
-		return messages, tools
+		return markMessageOrigin(messages, "client_context"), tools
 	}
 	if contents, ok := root["contents"].([]any); ok {
 		for _, item := range contents {
 			messages = append(messages, normalizeGeminiMessage(item)...)
 		}
 	}
-	return messages, tools
+	return markMessageOrigin(messages, "client_context"), tools
 }
 
 func normalizeResponse(protocol string, payload Payload) []Message {
 	if payload.Encoding == "json" {
 		if root, ok := payload.Data.(map[string]any); ok {
-			return normalizeResponseObject(protocol, root)
+			return markMessageOrigin(normalizeResponseObject(protocol, root), "model_output")
 		}
 		if array, ok := payload.Data.([]any); ok {
 			var messages []Message
@@ -58,7 +58,7 @@ func normalizeResponse(protocol string, payload Payload) []Message {
 					messages = append(messages, normalizeResponseObject(protocol, root)...)
 				}
 			}
-			return messages
+			return markMessageOrigin(messages, "model_output")
 		}
 	}
 	if payload.Encoding != "utf-8" {
@@ -92,7 +92,7 @@ func normalizeResponse(protocol string, payload Payload) []Message {
 		appendSSEDelta(root, &deltas, toolDeltas)
 	}
 	if len(final) > 0 {
-		return final
+		return markMessageOrigin(final, "model_output")
 	}
 	message := Message{Role: "assistant", Content: deltas.String()}
 	indexes := make([]int, 0, len(toolDeltas))
@@ -104,7 +104,7 @@ func normalizeResponse(protocol string, payload Payload) []Message {
 		message.ToolCalls = append(message.ToolCalls, *toolDeltas[index])
 	}
 	if messagesMeaningful([]Message{message}) {
-		return []Message{message}
+		return markMessageOrigin([]Message{message}, "model_output")
 	}
 	return nil
 }
@@ -157,12 +157,13 @@ func normalizeMessage(value any) []Message {
 		}
 		return []Message{{
 			Role: "assistant", Content: "",
+			ItemID: stringValue(item["id"]),
 			ToolCalls: []ToolCall{{ID: id, Type: "function", Function: ToolFunction{
 				Name: stringValue(item["name"]), Arguments: jsonString(item["arguments"]),
 			}}},
 		}}
 	case "function_call_output", "custom_tool_call_output":
-		return []Message{{Role: "tool", ToolCallID: stringValue(item["call_id"]), Content: normalizeContent(item["output"])}}
+		return []Message{{Role: "tool", ToolCallID: stringValue(item["call_id"]), ItemID: stringValue(item["id"]), Content: normalizeContent(item["output"])}}
 	}
 	role := stringValue(item["role"])
 	if role == "model" {
@@ -174,7 +175,7 @@ func normalizeMessage(value any) []Message {
 	if role == "" {
 		return nil
 	}
-	message := Message{Role: role, Content: normalizeContent(item["content"]), ToolCallID: stringValue(item["tool_call_id"])}
+	message := Message{Role: role, Content: normalizeContent(item["content"]), ToolCallID: stringValue(item["tool_call_id"]), ItemID: stringValue(item["id"])}
 	if calls, ok := item["tool_calls"].([]any); ok {
 		for _, call := range calls {
 			if normalized, ok := normalizeToolCall(call); ok {
@@ -192,7 +193,7 @@ func normalizeMessage(value any) []Message {
 					Function: ToolFunction{Name: stringValue(block["name"]), Arguments: jsonString(block["input"])},
 				})
 			case "tool_result":
-				return []Message{{Role: "tool", ToolCallID: stringValue(block["tool_use_id"]), Content: normalizeContent(block["content"])}}
+				return []Message{{Role: "tool", ToolCallID: stringValue(block["tool_use_id"]), ItemID: stringValue(item["id"]), Content: normalizeContent(block["content"])}}
 			}
 		}
 	}
@@ -208,7 +209,7 @@ func normalizeGeminiMessage(value any) []Message {
 	if role == "model" || role == "" {
 		role = "assistant"
 	}
-	message := Message{Role: role, Content: ""}
+	message := Message{Role: role, Content: "", ItemID: stringValue(item["id"])}
 	var text strings.Builder
 	if parts, ok := item["parts"].([]any); ok {
 		for _, raw := range parts {
@@ -221,12 +222,19 @@ func normalizeGeminiMessage(value any) []Message {
 				})
 			}
 			if response, ok := part["functionResponse"].(map[string]any); ok {
-				return []Message{{Role: "tool", ToolCallID: stringValue(response["id"]), Content: normalizeContent(response["response"])}}
+				return []Message{{Role: "tool", ToolCallID: stringValue(response["id"]), ItemID: stringValue(item["id"]), Content: normalizeContent(response["response"])}}
 			}
 		}
 	}
 	message.Content = text.String()
 	return []Message{message}
+}
+
+func markMessageOrigin(messages []Message, origin string) []Message {
+	for index := range messages {
+		messages[index].Origin = origin
+	}
+	return messages
 }
 
 func normalizeToolCall(value any) (ToolCall, bool) {

@@ -45,7 +45,7 @@ func TestBuildCreatesOwnExchangeAndSessionSchemas(t *testing.T) {
 
 	var session Session
 	readZstdJSONLine(t, sessionPath, &session)
-	assert.Equal(t, "emo-llm-session/1", session.Schema)
+	assert.Equal(t, "emo-llm-session/2", session.Schema)
 	assert.Equal(t, 1, session.Metadata.IncludedRequests)
 	require.Len(t, session.Messages, 3)
 	assert.Equal(t, "system", session.Messages[0].Role)
@@ -143,6 +143,52 @@ func TestAssembleSessionReusesFullRequestHistoryWithoutDuplicates(t *testing.T) 
 	})
 	assert.Equal(t, 2, session.Metadata.IncludedRequests)
 	assert.Empty(t, session.Metadata.NormalizationNotes)
+}
+
+func TestAssembleSessionSequenceAlignsSnapshotsWithMissingAssistantHistory(t *testing.T) {
+	base := Exchange{
+		Schema: "emo-llm-exchange/1", UserID: "user", SessionID: "session", SessionKnown: true,
+		Protocol: "openai_responses", Status: "completed", StatusCode: 200, MeaningfulOutput: true,
+		CaptureComplete: true, TerminationReason: "completed", NormalizationStatus: "normalized",
+	}
+	first := base
+	first.StartedAt, first.CompletedAt = "2026-09-08T01:00:00Z", "2026-09-08T01:00:01Z"
+	first.ClientRequest = Payload{Encoding: "json", Data: map[string]any{"input": []any{
+		map[string]any{"role": "user", "content": "old one"},
+		map[string]any{"role": "user", "content": "old two"},
+	}}}
+	first.ClientResponse = Payload{Encoding: "json", Data: map[string]any{"output": []any{
+		map[string]any{"id": "msg-answer", "type": "message", "role": "assistant", "content": "answer"},
+	}}}
+	second := base
+	second.StartedAt, second.CompletedAt = "2026-09-08T01:01:00Z", "2026-09-08T01:01:01Z"
+	second.ClientRequest = Payload{Encoding: "json", Data: map[string]any{"input": []any{
+		map[string]any{"role": "user", "content": "old one"},
+		map[string]any{"role": "user", "content": "old two"},
+		map[string]any{"role": "user", "content": "new question"},
+	}}}
+	second.ClientResponse = Payload{Encoding: "json", Data: map[string]any{"output": []any{
+		map[string]any{"id": "msg-new-answer", "type": "message", "role": "assistant", "content": "new answer"},
+	}}}
+
+	session, ok, err := assembleSession([]Exchange{first, second})
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Len(t, session.Messages, 5)
+	assert.Equal(t, []string{"old one", "old two", "answer", "new question", "new answer"}, []string{
+		session.Messages[0].Content.(string), session.Messages[1].Content.(string), session.Messages[2].Content.(string),
+		session.Messages[3].Content.(string), session.Messages[4].Content.(string),
+	})
+	assert.Equal(t, "model_output", session.Messages[2].Origin)
+	assert.Contains(t, session.Metadata.NormalizationNotes, "sequence_aligned_request_context")
+}
+
+func TestMergeRequestContextPreservesIntentionalRepeatedMessages(t *testing.T) {
+	notes := map[string]bool{}
+	existing := []Message{{Role: "user", Content: "continue", Origin: "client_context"}, {Role: "user", Content: "continue", Origin: "client_context"}}
+	request := []Message{{Role: "user", Content: "continue", Origin: "client_context"}, {Role: "user", Content: "continue", Origin: "client_context"}, {Role: "user", Content: "continue", Origin: "client_context"}}
+	merged := mergeRequestContext(existing, request, notes)
+	require.Len(t, merged, 3)
 }
 
 func writeRaw(t *testing.T, path, sessionID string, request, response []byte) {

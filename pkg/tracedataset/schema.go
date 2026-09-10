@@ -52,6 +52,8 @@ type Message struct {
 	Content    any        `json:"content"`
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
+	ItemID     string     `json:"item_id,omitempty"`
+	Origin     string     `json:"origin,omitempty"`
 }
 
 type ToolCall struct {

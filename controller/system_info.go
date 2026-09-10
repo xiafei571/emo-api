@@ -1,14 +1,37 @@
 package controller
 
 import (
+	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
 
 	"github.com/gin-gonic/gin"
 )
+
+func GetTraceArchiveStats(c *gin.Context) {
+	archive := middleware.AgentTraceArchive
+	if archive == nil {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": gin.H{"enabled": false}})
+		return
+	}
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 45*time.Second)
+	defer cancel()
+	inventory, err := archive.Inventory(ctx, c.Query("refresh") == "true")
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    gin.H{"enabled": true, "inventory": inventory, "process": archive.Stats()},
+	})
+}
 
 func ListSystemInstances(c *gin.Context) {
 	instances, err := model.ListSystemInstances()

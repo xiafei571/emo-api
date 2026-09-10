@@ -97,3 +97,40 @@ func TestS3UploadReportsSafeServiceError(t *testing.T) {
 	require.ErrorContains(t, err, "status=403 code=InvalidAccessKeyId request_id=request-123")
 	assert.NotContains(t, err.Error(), "sensitive detail")
 }
+
+func TestS3InventoryPaginatesAndAggregatesWithoutReadingObjects(t *testing.T) {
+	var requests atomic.Int32
+	s := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := requests.Add(1)
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/test-bucket", r.URL.Path)
+		assert.Equal(t, "raw/v1/", r.URL.Query().Get("prefix"))
+		assert.Contains(t, r.Header.Get("Authorization"), "/us-east-1/s3/aws4_request")
+		w.Header().Set("Content-Type", "application/xml")
+		if request == 1 {
+			assert.Empty(t, r.URL.Query().Get("continuation-token"))
+			_, _ = w.Write([]byte(`<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>next page</NextContinuationToken><Contents><Key>raw/v1/user=1/session=unknown/date=2026-09-09/one.jsonl.gz</Key><LastModified>2026-09-09T01:00:00Z</LastModified><Size>100</Size></Contents></ListBucketResult>`))
+			return
+		}
+		assert.Equal(t, "next page", r.URL.Query().Get("continuation-token"))
+		_, _ = w.Write([]byte(`<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>raw/v1/user=2/session=session-a/date=2026-09-10/two.jsonl.gz</Key><LastModified>2026-09-10T02:00:00Z</LastModified><Size>250</Size></Contents><Contents><Key>raw/v1/marker</Key><LastModified>2026-09-10T02:01:00Z</LastModified><Size>1</Size></Contents></ListBucketResult>`))
+	}))
+	defer s.Close()
+	cfg := testConfig(t)
+	cfg.Endpoint = s.URL
+	u := NewS3Uploader(cfg).(*s3Uploader)
+	u.client.Transport = s.Client().Transport
+	stats, err := u.Inventory(context.Background(), true)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), stats.Objects)
+	assert.Equal(t, int64(350), stats.CompressedBytes)
+	assert.Equal(t, int64(1), stats.UnknownSessionObjects)
+	assert.Equal(t, int64(1), stats.KnownSessionObjects)
+	assert.Equal(t, 2, stats.UniqueUsers)
+	assert.Equal(t, 1, stats.UniqueKnownSessions)
+	require.Len(t, stats.Daily, 2)
+	assert.Equal(t, "2026-09-10", stats.Daily[0].Date)
+	_, err = u.Inventory(context.Background(), false)
+	require.NoError(t, err)
+	assert.Equal(t, int32(2), requests.Load(), "cached inventory must not list S3 again")
+}

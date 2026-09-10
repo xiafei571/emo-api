@@ -21,6 +21,7 @@ import { api } from '@/lib/api'
 import type {
   SystemInstanceDeleteResponse,
   SystemInstanceListResponse,
+  TraceArchiveStatsResponse,
 } from './types'
 
 export async function listSystemInstances() {
@@ -40,6 +41,14 @@ export async function deleteStaleSystemInstances() {
 export async function deleteStaleSystemInstance(nodeName: string) {
   const res = await api.delete<SystemInstanceDeleteResponse>(
     `/api/system-info/instances/${encodeURIComponent(nodeName)}`
+  )
+  return res.data
+}
+
+export async function getTraceArchiveStats(refresh = false) {
+  const res = await api.get<TraceArchiveStatsResponse>(
+    '/api/system-info/trace-archive',
+    { params: refresh ? { refresh: 'true' } : undefined }
   )
   return res.data
 }

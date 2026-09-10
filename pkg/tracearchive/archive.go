@@ -48,8 +48,39 @@ type Stats struct {
 	Failures   int64 `json:"failures"`
 }
 
+type DailyInventoryStats struct {
+	Date            string `json:"date"`
+	Objects         int64  `json:"objects"`
+	CompressedBytes int64  `json:"compressed_bytes"`
+}
+
+type InventoryStats struct {
+	Objects               int64                 `json:"objects"`
+	CompressedBytes       int64                 `json:"compressed_bytes"`
+	UnknownSessionObjects int64                 `json:"unknown_session_objects"`
+	KnownSessionObjects   int64                 `json:"known_session_objects"`
+	UniqueUsers           int                   `json:"unique_users"`
+	UniqueKnownSessions   int                   `json:"unique_known_sessions"`
+	FirstUploadedAt       time.Time             `json:"first_uploaded_at,omitempty"`
+	LastUploadedAt        time.Time             `json:"last_uploaded_at,omitempty"`
+	CalculatedAt          time.Time             `json:"calculated_at"`
+	Daily                 []DailyInventoryStats `json:"daily"`
+}
+
+type InventoryProvider interface {
+	Inventory(context.Context, bool) (InventoryStats, error)
+}
+
 func (a *Archive) Stats() Stats {
 	return Stats{a.bytes.Load(), a.started.Load(), a.finished.Load(), a.uploaded.Load(), a.failures.Load()}
+}
+
+func (a *Archive) Inventory(ctx context.Context, refresh bool) (InventoryStats, error) {
+	provider, ok := a.uploader.(InventoryProvider)
+	if !ok {
+		return InventoryStats{}, fmt.Errorf("archive uploader does not support inventory")
+	}
+	return provider.Inventory(ctx, refresh)
 }
 
 // Open performs recovery before any requests or background workers can access the spool.

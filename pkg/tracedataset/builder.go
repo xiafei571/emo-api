@@ -186,7 +186,7 @@ func buildSession(path string) (Session, bool, error) {
 func assembleSession(exchanges []Exchange) (Session, bool, error) {
 	first, last := exchanges[0], exchanges[len(exchanges)-1]
 	session := Session{
-		Schema: "emo-llm-session/1", UserID: first.UserID, SessionID: first.SessionID,
+		Schema: "emo-llm-session/2", UserID: first.UserID, SessionID: first.SessionID,
 		Metadata: SessionMetadata{SourceFormat: "emo-llm-exchange/1", StartedAt: first.StartedAt, EndedAt: last.CompletedAt,
 			Status: last.Status, TerminationReason: last.TerminationReason, RequestCount: len(exchanges)},
 	}
@@ -237,7 +237,7 @@ func assembleSession(exchanges []Exchange) (Session, bool, error) {
 
 func mergeRequestContext(existing, request []Message, notes map[string]bool) []Message {
 	if messageSlicePrefix(existing, request) {
-		return append([]Message(nil), request...)
+		return append(existing, request[len(existing):]...)
 	}
 	if messageSlicePrefix(request, existing) {
 		return existing
@@ -247,11 +247,50 @@ func mergeRequestContext(existing, request []Message, notes map[string]bool) []M
 			return append(existing, request[overlap:]...)
 		}
 	}
-	notes["non_overlapping_request_context"] = true
-	for _, message := range request {
-		existing = appendUniqueMessage(existing, message)
+	notes["sequence_aligned_request_context"] = true
+	return shortestMessageSupersequence(existing, request)
+}
+
+// shortestMessageSupersequence merges two snapshots while preserving the order
+// of both. Responses clients resend overlapping conversation context but may
+// omit reasoning or older assistant items, so exact prefix matching alone is
+// not sufficient and causes whole histories to be duplicated.
+func shortestMessageSupersequence(existing, request []Message) []Message {
+	rows, columns := len(existing)+1, len(request)+1
+	lcs := make([]uint32, rows*columns)
+	cell := func(row, column int) int { return row*columns + column }
+	for row := len(existing) - 1; row >= 0; row-- {
+		for column := len(request) - 1; column >= 0; column-- {
+			if messagesEqual(existing[row], request[column]) {
+				lcs[cell(row, column)] = lcs[cell(row+1, column+1)] + 1
+			} else if lcs[cell(row+1, column)] >= lcs[cell(row, column+1)] {
+				lcs[cell(row, column)] = lcs[cell(row+1, column)]
+			} else {
+				lcs[cell(row, column)] = lcs[cell(row, column+1)]
+			}
+		}
 	}
-	return existing
+
+	merged := make([]Message, 0, len(existing)+len(request)-int(lcs[0]))
+	row, column := 0, 0
+	for row < len(existing) && column < len(request) {
+		if messagesEqual(existing[row], request[column]) {
+			// Keep the existing copy so a model_output origin is not downgraded to
+			// client_context when the client sends the same item back.
+			merged = append(merged, existing[row])
+			row++
+			column++
+		} else if lcs[cell(row+1, column)] >= lcs[cell(row, column+1)] {
+			merged = append(merged, existing[row])
+			row++
+		} else {
+			merged = append(merged, request[column])
+			column++
+		}
+	}
+	merged = append(merged, existing[row:]...)
+	merged = append(merged, request[column:]...)
+	return merged
 }
 
 func appendUniqueMessage(messages []Message, message Message) []Message {
@@ -278,6 +317,11 @@ func messageSlicesEqual(left, right []Message) bool {
 }
 
 func messagesEqual(left, right Message) bool {
+	if left.ItemID != "" && right.ItemID != "" {
+		return left.ItemID == right.ItemID && left.Role == right.Role
+	}
+	left.Origin, right.Origin = "", ""
+	left.ItemID, right.ItemID = "", ""
 	leftJSON, leftErr := common.Marshal(left)
 	rightJSON, rightErr := common.Marshal(right)
 	return leftErr == nil && rightErr == nil && string(leftJSON) == string(rightJSON)

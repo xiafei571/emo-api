@@ -85,3 +85,38 @@ export type SystemInstanceDeleteResponse = {
     deleted_count: number
   }
 }
+
+export type TraceArchiveDailyStats = {
+  date: string
+  objects: number
+  compressed_bytes: number
+}
+
+export type TraceArchiveStats = {
+  enabled: boolean
+  inventory?: {
+    objects: number
+    compressed_bytes: number
+    unknown_session_objects: number
+    known_session_objects: number
+    unique_users: number
+    unique_known_sessions: number
+    first_uploaded_at?: string
+    last_uploaded_at?: string
+    calculated_at: string
+    daily: TraceArchiveDailyStats[]
+  }
+  process?: {
+    spool_bytes: number
+    started: number
+    finished: number
+    uploaded: number
+    failures: number
+  }
+}
+
+export type TraceArchiveStatsResponse = {
+  success: boolean
+  message: string
+  data?: TraceArchiveStats
+}
