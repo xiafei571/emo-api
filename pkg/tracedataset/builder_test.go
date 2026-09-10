@@ -35,7 +35,7 @@ func TestBuildCreatesOwnExchangeAndSessionSchemas(t *testing.T) {
 
 	var exchange Exchange
 	readZstdJSONLine(t, exchangePath, &exchange)
-	assert.Equal(t, "emo-agent-exchange/1", exchange.Schema)
+	assert.Equal(t, "emo-llm-exchange/1", exchange.Schema)
 	assert.NotEqual(t, "7", exchange.UserID)
 	assert.NotEqual(t, "session-one", exchange.SessionID)
 	assert.Equal(t, 4, exchange.Usage.InputTokens)
@@ -45,7 +45,7 @@ func TestBuildCreatesOwnExchangeAndSessionSchemas(t *testing.T) {
 
 	var session Session
 	readZstdJSONLine(t, sessionPath, &session)
-	assert.Equal(t, "emo-agent-session/1", session.Schema)
+	assert.Equal(t, "emo-llm-session/1", session.Schema)
 	assert.Equal(t, 1, session.Metadata.IncludedRequests)
 	require.Len(t, session.Messages, 3)
 	assert.Equal(t, "system", session.Messages[0].Role)
@@ -66,6 +66,29 @@ func TestBuildKeepsUnknownSessionOnlyInExchangeDataset(t *testing.T) {
 	assert.Equal(t, 1, report.Exchanges)
 	assert.Equal(t, 1, report.UnknownSessions)
 	assert.Zero(t, report.Sessions)
+}
+
+func TestBuildRecoversCodexSessionFromLegacyUnknownTrace(t *testing.T) {
+	root := t.TempDir()
+	input := filepath.Join(root, "raw")
+	require.NoError(t, os.MkdirAll(input, 0700))
+	request := []byte(`{"model":"gpt-test","client_metadata":{"session_id":"legacy-codex-session"},"input":"hello"}`)
+	response := []byte(`{"output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"hi"}]}]}`)
+	writeRaw(t, filepath.Join(input, "legacy-unknown.jsonl.gz"), "", request, response)
+	exchangePath := filepath.Join(root, "exchanges.jsonl.zst")
+	sessionPath := filepath.Join(root, "sessions.jsonl.zst")
+	report, err := Build(BuildOptions{
+		InputDir: input, ExchangeOutput: exchangePath, SessionOutput: sessionPath,
+		IdentityKey: []byte("0123456789abcdef0123456789abcdef"),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, Report{RawFiles: 1, Exchanges: 1, Sessions: 1}, report)
+
+	var exchange Exchange
+	readZstdJSONLine(t, exchangePath, &exchange)
+	assert.True(t, exchange.SessionKnown)
+	assert.NotEmpty(t, exchange.SessionID)
+	assert.Equal(t, "body:client_metadata.session_id", exchange.Source.SessionSource)
 }
 
 func TestBuildRejectsIncompleteRawWithoutPublishingOutputs(t *testing.T) {
@@ -102,7 +125,7 @@ func TestAssembleSessionReusesFullRequestHistoryWithoutDuplicates(t *testing.T) 
 		"output": []any{map[string]any{"type": "message", "role": "assistant", "content": []any{map[string]any{"type": "output_text", "text": "answer two"}}}},
 	}}
 	base := Exchange{
-		Schema: "emo-agent-exchange/1", UserID: "user", SessionID: "session", SessionKnown: true,
+		Schema: "emo-llm-exchange/1", UserID: "user", SessionID: "session", SessionKnown: true,
 		Protocol: "openai_responses", Status: "completed", StatusCode: 200, MeaningfulOutput: true,
 		CaptureComplete: true, TerminationReason: "completed", NormalizationStatus: "normalized",
 	}

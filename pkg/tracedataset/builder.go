@@ -186,8 +186,8 @@ func buildSession(path string) (Session, bool, error) {
 func assembleSession(exchanges []Exchange) (Session, bool, error) {
 	first, last := exchanges[0], exchanges[len(exchanges)-1]
 	session := Session{
-		Schema: "emo-agent-session/1", UserID: first.UserID, SessionID: first.SessionID,
-		Metadata: SessionMetadata{SourceFormat: "emo-agent-exchange/1", StartedAt: first.StartedAt, EndedAt: last.CompletedAt,
+		Schema: "emo-llm-session/1", UserID: first.UserID, SessionID: first.SessionID,
+		Metadata: SessionMetadata{SourceFormat: "emo-llm-exchange/1", StartedAt: first.StartedAt, EndedAt: last.CompletedAt,
 			Status: last.Status, TerminationReason: last.TerminationReason, RequestCount: len(exchanges)},
 	}
 	protocols := map[string]bool{}

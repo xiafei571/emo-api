@@ -12,8 +12,8 @@ import (
 
 func main() {
 	input := flag.String("input", "", "directory containing EMO raw .jsonl.gz or .ready files")
-	exchanges := flag.String("exchanges", "", "output path for emo-agent-exchange JSONL zstd")
-	sessions := flag.String("sessions", "", "output path for emo-agent-session JSONL zstd")
+	exchanges := flag.String("exchanges", "", "output path for emo-llm-exchange JSONL zstd")
+	sessions := flag.String("sessions", "", "output path for emo-llm-session JSONL zstd")
 	keyFile := flag.String("identity-key-file", "", "file containing at least 32 bytes used for stable HMAC pseudonyms")
 	tempDir := flag.String("temp-dir", "", "optional temporary working directory")
 	flag.Parse()

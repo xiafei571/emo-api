@@ -11,6 +11,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/pkg/tracearchive"
 	"github.com/tidwall/gjson"
 )
 
@@ -26,29 +27,79 @@ func exchangeFromRaw(raw rawExchange, sourcePath string, identityKey []byte) Exc
 	}
 	augmentUsage(&usage, raw.response)
 	usage.TotalTokens = usage.InputTokens + usage.OutputTokens
+	captureComplete, captureRecovery := effectiveCapture(raw)
 	status := "failed"
-	if end.Reason == "client_cancelled" {
+	if end.Reason == "client_cancelled" && !captureComplete {
 		status = "cancelled"
-	} else if end.Status >= 200 && end.Status < 400 && end.CaptureComplete {
+	} else if end.Status >= 200 && end.Status < 400 && captureComplete {
 		status = "completed"
 	}
-	sessionID := ""
-	if meta.SessionID != "" {
-		sessionID = pseudonym(identityKey, "session:"+meta.SessionID)
-	}
 	protocol := protocolForPath(meta.Path)
+	rawSessionID, sessionSource := datasetSessionIdentity(meta, protocol, request)
+	sessionID := ""
+	if rawSessionID != "" {
+		sessionID = pseudonym(identityKey, "session:"+rawSessionID)
+	}
 	responseMessages := normalizeResponse(protocol, response)
 	return Exchange{
-		Schema: "emo-agent-exchange/1", UserID: pseudonym(identityKey, fmt.Sprintf("user:%d", meta.UserID)),
+		Schema: "emo-llm-exchange/1", UserID: pseudonym(identityKey, fmt.Sprintf("user:%d", meta.UserID)),
 		SessionID: sessionID, SessionKnown: sessionID != "", ArchiveID: meta.ArchiveID, RequestID: meta.RequestID,
 		Model: end.Model, Protocol: protocol, Status: status, StatusCode: end.Status,
 		StartedAt: raw.start.Timestamp, CompletedAt: raw.end.Timestamp,
 		MeaningfulOutput: status == "completed" && messagesMeaningful(responseMessages),
-		CaptureComplete:  end.CaptureComplete, TerminationReason: end.Reason, StreamEndReason: end.StreamEndReason,
+		CaptureComplete:  captureComplete, CaptureRecovered: captureRecovery != "", CaptureRecovery: captureRecovery,
+		TerminationReason: end.Reason, StreamEndReason: end.StreamEndReason,
 		Usage: usage, ClientRequest: request, ClientResponse: response,
-		Source:              ExchangeSource{Path: filepath.ToSlash(sourcePath), ContentType: meta.ContentType, ResponseContentType: end.ContentType},
+		Source: ExchangeSource{Path: filepath.ToSlash(sourcePath), ContentType: meta.ContentType,
+			ResponseContentType: end.ContentType, SessionSource: sessionSource},
 		NormalizationStatus: normalizationStatus(protocol, request, responseMessages),
 	}
+}
+
+// Older middleware versions marked a request client_cancelled whenever the Go
+// request context was cancelled during normal cleanup. A complete, valid,
+// non-streaming JSON response can be repaired without guessing at missing bytes.
+func effectiveCapture(raw rawExchange) (bool, string) {
+	meta, end := raw.start.Metadata, raw.end.End
+	if end.CaptureComplete {
+		return true, ""
+	}
+	if end.Reason != "client_cancelled" || end.CaptureError != "" || end.Status < 200 || end.Status >= 400 ||
+		strings.HasPrefix(strings.ToLower(end.ContentType), "text/event-stream") || !gjson.ValidBytes(raw.response) ||
+		int64(len(raw.request)) != end.RequestBytes || int64(len(raw.response)) != end.ResponseBytes {
+		return false, ""
+	}
+	if meta.ContentLength >= 0 && meta.ContentLength != int64(len(raw.request)) {
+		return false, ""
+	}
+	return true, "legacy_false_client_cancelled_complete_json"
+}
+
+func datasetSessionIdentity(meta *tracearchive.Metadata, protocol string, request Payload) (string, string) {
+	if meta.SessionID != "" {
+		return meta.SessionID, meta.SessionSource
+	}
+	if protocol != "openai_responses" || request.Encoding != "json" {
+		return "", "unknown"
+	}
+	root, ok := request.Data.(map[string]any)
+	if !ok {
+		return "", "unknown"
+	}
+	clientMetadata, _ := root["client_metadata"].(map[string]any)
+	for _, candidate := range []struct {
+		value  any
+		source string
+	}{
+		{clientMetadata["session_id"], "body:client_metadata.session_id"},
+		{clientMetadata["thread_id"], "body:client_metadata.thread_id"},
+		{root["prompt_cache_key"], "body:prompt_cache_key"},
+	} {
+		if value, ok := candidate.value.(string); ok && value != "" && len(value) <= 256 && !strings.ContainsAny(value, "\r\n\x00") {
+			return value, candidate.source
+		}
+	}
+	return "", "unknown"
 }
 
 func pseudonym(key []byte, value string) string {

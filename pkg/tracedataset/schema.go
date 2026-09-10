@@ -29,6 +29,8 @@ type Exchange struct {
 	CompletedAt         string         `json:"completed_at"`
 	MeaningfulOutput    bool           `json:"meaningful_output"`
 	CaptureComplete     bool           `json:"capture_complete"`
+	CaptureRecovered    bool           `json:"capture_recovered,omitempty"`
+	CaptureRecovery     string         `json:"capture_recovery,omitempty"`
 	TerminationReason   string         `json:"termination_reason"`
 	StreamEndReason     string         `json:"stream_end_reason,omitempty"`
 	Usage               Usage          `json:"usage"`
@@ -42,6 +44,7 @@ type ExchangeSource struct {
 	Path                string `json:"path"`
 	ContentType         string `json:"content_type,omitempty"`
 	ResponseContentType string `json:"response_content_type,omitempty"`
+	SessionSource       string `json:"session_source"`
 }
 
 type Message struct {

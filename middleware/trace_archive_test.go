@@ -18,6 +18,7 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/tracearchive"
+	relaycommon "github.com/QuantumNous/new-api/relay/common"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -119,6 +120,79 @@ func TestRawTracePreservesHTTPAndBodyReuse(t *testing.T) {
 	assert.Equal(t, "unknown", end.StreamEndReason)
 }
 
+func TestRawTraceResolvesCodexSessionFromResponsesBody(t *testing.T) {
+	a, dir := traceFixture(t)
+	g := gin.New()
+	g.Use(func(c *gin.Context) { c.Set("id", 17); c.Set("token_id", 8) }, RawTraceArchive(a))
+	body := []byte(`{"model":"gpt-5.6-sol","client_metadata":{"session_id":"codex-session","thread_id":"codex-thread"},"prompt_cache_key":"cache-key","input":[]}`)
+	g.POST("/v1/responses", func(c *gin.Context) {
+		actual, err := io.ReadAll(c.Request.Body)
+		require.NoError(t, err)
+		assert.Equal(t, body, actual)
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	w := httptest.NewRecorder()
+	g.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	events, bodies := capturedTrace(t, dir)
+	assert.Equal(t, body, bodies["request.chunk"])
+	require.NotNil(t, events[0].Metadata)
+	assert.Equal(t, "codex-session", events[0].Metadata.SessionID)
+	assert.Equal(t, "body:client_metadata.session_id", events[0].Metadata.SessionSource)
+}
+
+func TestRawTraceSessionHeaderOverridesResponsesBody(t *testing.T) {
+	a, dir := traceFixture(t)
+	g := gin.New()
+	g.Use(func(c *gin.Context) { c.Set("id", 17) }, RawTraceArchive(a))
+	body := []byte(`{"client_metadata":{"session_id":"body-session"}}`)
+	g.POST("/v1/responses", func(c *gin.Context) {
+		actual, err := io.ReadAll(c.Request.Body)
+		require.NoError(t, err)
+		assert.Equal(t, body, actual)
+		c.Status(http.StatusNoContent)
+	})
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-EMO-Session-ID", "header-session")
+	w := httptest.NewRecorder()
+	g.ServeHTTP(w, req)
+
+	events, _ := capturedTrace(t, dir)
+	require.NotNil(t, events[0].Metadata)
+	assert.Equal(t, "header-session", events[0].Metadata.SessionID)
+	assert.Equal(t, "header:X-EMO-Session-ID", events[0].Metadata.SessionSource)
+}
+
+func TestTraceSessionBodyFallbackOrder(t *testing.T) {
+	for _, test := range []struct {
+		name, body, session, source string
+	}{
+		{"thread", `{"client_metadata":{"thread_id":"thread-id"},"prompt_cache_key":"cache-id"}`, "thread-id", "body:client_metadata.thread_id"},
+		{"cache", `{"prompt_cache_key":"cache-id"}`, "cache-id", "body:prompt_cache_key"},
+		{"chat-not-guessed", `{"session_id":"custom-id","messages":[]}`, "", "unknown"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			path := "/v1/responses"
+			if test.name == "chat-not-guessed" {
+				path = "/v1/chat/completions"
+			}
+			c.Request = httptest.NewRequest(http.MethodPost, path, strings.NewReader(test.body))
+			c.Request.Header.Set("Content-Type", "application/json")
+			session, source := traceSession(c)
+			assert.Equal(t, test.session, session)
+			assert.Equal(t, test.source, source)
+			restored, err := io.ReadAll(c.Request.Body)
+			require.NoError(t, err)
+			assert.Equal(t, test.body, string(restored))
+		})
+	}
+}
+
 func TestRawTraceFailureAndCancellation(t *testing.T) {
 	for _, mode := range []string{"unread", "cancelled", "panic"} {
 		t.Run(mode, func(t *testing.T) {
@@ -151,6 +225,36 @@ func TestRawTraceFailureAndCancellation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRawTraceCompletedStreamIsNotRelabelledCancelled(t *testing.T) {
+	a, dir := traceFixture(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	req := httptest.NewRequest(http.MethodPost, "/v1/responses", strings.NewReader("{}"))
+	req = req.WithContext(ctx)
+	// Simulate transport cleanup after a complete terminal event but before the
+	// archive middleware's deferred finalizer runs.
+	g := gin.New()
+	g.Use(func(c *gin.Context) { c.Set("id", 1) }, RawTraceArchive(a))
+	g.POST("/v1/responses", func(c *gin.Context) {
+		_, err := io.ReadAll(c.Request.Body)
+		require.NoError(t, err)
+		status := relaycommon.NewStreamStatus()
+		status.SetEndReason(relaycommon.StreamEndReasonDone, nil)
+		c.Set(tracearchive.StreamContextKey, status)
+		c.Header("Content-Type", "text/event-stream")
+		_, err = c.Writer.WriteString("data: [DONE]\n\n")
+		require.NoError(t, err)
+		cancel()
+	})
+	w := httptest.NewRecorder()
+	g.ServeHTTP(w, req)
+	events, _ := capturedTrace(t, dir)
+	end := events[len(events)-1].End
+	require.NotNil(t, end)
+	assert.True(t, end.CaptureComplete)
+	assert.Equal(t, "handler_returned", end.Reason)
+	assert.Equal(t, "done", end.StreamEndReason)
 }
 
 func TestRawTraceDisabledOrUnauthenticatedIsTransparent(t *testing.T) {
