@@ -16,13 +16,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import { normalizeInterfaceLanguage } from '@/i18n/languages'
+
 import {
   PAYMENT_TYPES,
   DEFAULT_PRESET_MULTIPLIERS,
   DEFAULT_PAYMENT_TYPE,
   DEFAULT_MIN_TOPUP,
 } from '../constants'
-import type { PaymentMethod, PresetAmount, TopupInfo } from '../types'
+import type {
+  PaymentMethod,
+  PresetAmount,
+  StripeCurrency,
+  TopupInfo,
+} from '../types'
 
 // ============================================================================
 // Payment Processing Functions
@@ -93,8 +100,37 @@ export function isWaffoPancakePayment(paymentType: string): boolean {
   return paymentType === PAYMENT_TYPES.WAFFO_PANCAKE
 }
 
+export function getDefaultStripeCurrency(language?: string): StripeCurrency {
+  const normalizedLanguage = normalizeInterfaceLanguage(language)
+
+  if (normalizedLanguage === 'zhCN') {
+    return 'CNY'
+  }
+  if (normalizedLanguage === 'ja') {
+    return 'JPY'
+  }
+  return 'USD'
+}
+
+export function orderStripeCurrencies(
+  currencies: StripeCurrency[],
+  language?: string
+): StripeCurrency[] {
+  const defaultCurrency = getDefaultStripeCurrency(language)
+
+  return [...currencies].sort((left, right) => {
+    if (left === defaultCurrency) return -1
+    if (right === defaultCurrency) return 1
+    return 0
+  })
+}
+
 export interface PaymentProcessors {
-  regular: (topupAmount: number, paymentType: string) => Promise<boolean>
+  regular: (
+    topupAmount: number,
+    paymentType: string,
+    currency?: StripeCurrency
+  ) => Promise<boolean>
   waffo: (topupAmount: number, payMethodIndex: number) => Promise<boolean>
   waffoPancake: (topupAmount: number) => Promise<boolean>
 }
@@ -116,7 +152,11 @@ export async function dispatchSelectedPayment(
     return processors.waffoPancake(topupAmount)
   }
 
-  return processors.regular(topupAmount, paymentMethod.type)
+  return processors.regular(
+    topupAmount,
+    paymentMethod.type,
+    paymentMethod.currency
+  )
 }
 
 /**

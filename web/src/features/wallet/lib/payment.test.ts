@@ -22,9 +22,11 @@ import { describe, test } from 'node:test'
 import { PAYMENT_TYPES } from '../constants'
 import {
   dispatchSelectedPayment,
+  getDefaultStripeCurrency,
   isStripePayment,
   isWaffoPayment,
   isWaffoPancakePayment,
+  orderStripeCurrencies,
 } from './payment'
 
 describe('payment type classification', () => {
@@ -82,5 +84,41 @@ describe('payment dispatch', () => {
 
     assert.equal(success, false)
     assert.equal(called, false)
+  })
+
+  test('passes the selected Stripe currency to the regular processor', async () => {
+    const calls: string[] = []
+    const success = await dispatchSelectedPayment(
+      { name: 'CNY', type: PAYMENT_TYPES.STRIPE, currency: 'CNY' },
+      5,
+      null,
+      {
+        regular: async (amount, type, currency) => {
+          calls.push(`${type}:${currency}:${amount}`)
+          return true
+        },
+        waffo: async () => false,
+        waffoPancake: async () => false,
+      }
+    )
+
+    assert.equal(success, true)
+    assert.deepEqual(calls, ['stripe:CNY:5'])
+  })
+})
+
+describe('Stripe currency defaults', () => {
+  test('maps interface languages to their local payment currency', () => {
+    assert.equal(getDefaultStripeCurrency('zh-CN'), 'CNY')
+    assert.equal(getDefaultStripeCurrency('ja-JP'), 'JPY')
+    assert.equal(getDefaultStripeCurrency('en-US'), 'USD')
+  })
+
+  test('puts the language currency first while preserving other options', () => {
+    assert.deepEqual(orderStripeCurrencies(['USD', 'CNY', 'JPY'], 'ja'), [
+      'JPY',
+      'USD',
+      'CNY',
+    ])
   })
 })

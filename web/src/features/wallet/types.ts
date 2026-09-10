@@ -100,7 +100,11 @@ export interface PaymentMethod {
   min_topup?: number
   /** Optional react-icons component name or safe icon URL */
   icon?: string
+  /** Stripe settlement currency selected by the user */
+  currency?: StripeCurrency
 }
+
+export type StripeCurrency = 'USD' | 'CNY' | 'JPY'
 
 export interface PaymentMethodOption {
   /** Stable value used by the payment-method selector */
@@ -143,6 +147,8 @@ export interface TopupInfo {
   min_topup: number
   /** Minimum topup amount for Stripe */
   stripe_min_topup: number
+  /** Stripe currencies backed by configured Price IDs */
+  stripe_currencies?: StripeCurrency[]
   /** Preset amount options */
   amount_options: number[]
   /** Discount rates by amount */
@@ -199,6 +205,8 @@ export interface PaymentRequest {
   amount: number
   /** Payment method identifier */
   payment_method: string
+  /** Stripe payment currency */
+  currency?: StripeCurrency
 }
 
 /**
@@ -225,6 +233,8 @@ export interface WaffoPancakePaymentRequest {
 export interface AmountRequest {
   /** Topup amount to calculate */
   amount: number
+  /** Stripe payment currency */
+  currency?: StripeCurrency
 }
 
 /**

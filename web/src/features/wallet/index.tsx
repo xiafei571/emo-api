@@ -46,6 +46,7 @@ import {
   getDefaultPaymentType,
   getMinTopupAmount,
   dispatchSelectedPayment,
+  orderStripeCurrencies,
 } from './lib'
 import type {
   UserWalletData,
@@ -60,7 +61,7 @@ interface WalletProps {
 }
 
 export function Wallet(props: WalletProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const [user, setUser] = useState<UserWalletData | null>(null)
   const [userLoading, setUserLoading] = useState(true)
   const [topupAmount, setTopupAmount] = useState(0)
@@ -118,32 +119,43 @@ export function Wallet(props: WalletProps) {
 
   const paymentOptions = useMemo<PaymentMethodOption[]>(() => {
     const configuredMethods = topupInfo?.pay_methods ?? []
-    const coreMethods = [{ type: PAYMENT_TYPES.STRIPE, name: 'Stripe' }]
+    const configuredCurrencies = topupInfo?.stripe_currencies ?? ['USD']
+    const stripeCurrencies = orderStripeCurrencies(
+      configuredCurrencies,
+      i18n.resolvedLanguage ?? i18n.language
+    )
+    const coreMethods = stripeCurrencies.map((stripeCurrency) => ({
+      type: PAYMENT_TYPES.STRIPE,
+      name: stripeCurrency,
+      currency: stripeCurrency,
+    }))
 
-    const options: PaymentMethodOption[] = coreMethods.map(({ type, name }) => {
-      const configured = configuredMethods.find(
-        (method) => method.type === type
-      )
-      const gatewayEnabled = Boolean(topupInfo?.enable_stripe_topup)
-      const gatewayMinimum = topupInfo?.stripe_min_topup || 0
-      const minimum = Math.max(configured?.min_topup || 0, gatewayMinimum)
-      const meetsMinimum = topupAmount >= minimum
-      let disabledReason: string | undefined
-      if (!gatewayEnabled) {
-        disabledReason = t('Not configured')
-      } else if (!meetsMinimum) {
-        disabledReason = t('Minimum topup amount: {{amount}}', {
-          amount: minimum,
-        })
-      }
+    const options: PaymentMethodOption[] = coreMethods.map(
+      ({ type, name, currency: stripeCurrency }) => {
+        const configured = configuredMethods.find(
+          (method) => method.type === type
+        )
+        const gatewayEnabled = Boolean(topupInfo?.enable_stripe_topup)
+        const gatewayMinimum = topupInfo?.stripe_min_topup || 0
+        const minimum = Math.max(configured?.min_topup || 0, gatewayMinimum)
+        const meetsMinimum = topupAmount >= minimum
+        let disabledReason: string | undefined
+        if (!gatewayEnabled) {
+          disabledReason = t('Not configured')
+        } else if (!meetsMinimum) {
+          disabledReason = t('Minimum topup amount: {{amount}}', {
+            amount: minimum,
+          })
+        }
 
-      return {
-        value: type,
-        method: configured ?? { name, type },
-        enabled: gatewayEnabled && meetsMinimum,
-        disabledReason,
+        return {
+          value: `${type}:${stripeCurrency}`,
+          method: { ...configured, name, type, currency: stripeCurrency },
+          enabled: gatewayEnabled && meetsMinimum,
+          disabledReason,
+        }
       }
-    })
+    )
 
     if (topupInfo?.enable_waffo_topup) {
       const minimum = topupInfo.waffo_min_topup || 0
@@ -182,7 +194,7 @@ export function Wallet(props: WalletProps) {
     }
 
     return options
-  }, [t, topupAmount, topupInfo])
+  }, [i18n.language, i18n.resolvedLanguage, t, topupAmount, topupInfo])
 
   // Fetch and refresh user data
   const fetchUser = useCallback(async () => {
@@ -230,27 +242,44 @@ export function Wallet(props: WalletProps) {
 
       // Calculate initial payment amount with default payment type
       const defaultPaymentType = getDefaultPaymentType(topupInfo)
-      calculatePaymentAmount(initialAmount, defaultPaymentType)
+      const defaultOption = paymentOptions.find(
+        (option) => option.method.type === defaultPaymentType && option.enabled
+      )
+      calculatePaymentAmount(
+        initialAmount,
+        defaultPaymentType,
+        defaultOption?.method.currency
+      )
     }
-  }, [topupInfo, presetAmounts, calculatePaymentAmount])
+  }, [topupInfo, presetAmounts, paymentOptions, calculatePaymentAmount])
 
   // Get current payment type (selected or default)
-  const getCurrentPaymentType = useCallback(() => {
-    return selectedPaymentMethod?.type || getDefaultPaymentType(topupInfo)
-  }, [selectedPaymentMethod, topupInfo])
+  const getCurrentPaymentSelection = useCallback(() => {
+    const defaultType = getDefaultPaymentType(topupInfo)
+    const defaultOption = paymentOptions.find(
+      (option) => option.method.type === defaultType && option.enabled
+    )
+    return {
+      type: selectedPaymentMethod?.type || defaultType,
+      currency:
+        selectedPaymentMethod?.currency ?? defaultOption?.method.currency,
+    }
+  }, [paymentOptions, selectedPaymentMethod, topupInfo])
 
   // Handle preset selection
   const handleSelectPreset = (preset: PresetAmount) => {
     setTopupAmount(preset.value)
     setSelectedPreset(preset.value)
-    calculatePaymentAmount(preset.value, getCurrentPaymentType())
+    const selection = getCurrentPaymentSelection()
+    calculatePaymentAmount(preset.value, selection.type, selection.currency)
   }
 
   // Handle topup amount change
   const handleTopupAmountChange = (amount: number) => {
     setTopupAmount(amount)
     setSelectedPreset(null)
-    calculatePaymentAmount(amount, getCurrentPaymentType())
+    const selection = getCurrentPaymentSelection()
+    calculatePaymentAmount(amount, selection.type, selection.currency)
   }
 
   const selectPaymentOption = useCallback(
@@ -263,7 +292,11 @@ export function Wallet(props: WalletProps) {
       setPaymentLoading(option.value)
 
       try {
-        await calculatePaymentAmount(topupAmount, option.method.type)
+        await calculatePaymentAmount(
+          topupAmount,
+          option.method.type,
+          option.method.currency
+        )
         return true
       } finally {
         setPaymentLoading(null)
@@ -428,7 +461,7 @@ export function Wallet(props: WalletProps) {
         topupAmount={topupAmount}
         creditAmount={creditAmount}
         paymentAmount={paymentAmount}
-        currencyUnit={currencyUnit}
+        currencyUnit={selectedPaymentMethod?.currency ?? currencyUnit}
         paymentOptions={paymentOptions}
         selectedPaymentOptionValue={selectedPaymentOptionValue}
         onPaymentMethodChange={handlePaymentMethodChange}

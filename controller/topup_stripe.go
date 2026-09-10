@@ -31,6 +31,8 @@ type StripePayRequest struct {
 	Amount int64 `json:"amount"`
 	// PaymentMethod specifies the payment method (e.g., "stripe").
 	PaymentMethod string `json:"payment_method"`
+	// Currency selects the configured Stripe Price. Empty keeps the legacy USD flow.
+	Currency string `json:"currency,omitempty"`
 	// SuccessURL is the optional custom URL to redirect after successful payment.
 	// If empty, defaults to the server's console log page.
 	SuccessURL string `json:"success_url,omitempty"`
@@ -47,12 +49,21 @@ func (*StripeAdaptor) RequestAmount(c *gin.Context, req *StripePayRequest) {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": fmt.Sprintf("充值数量不能小于 %d", getStripeMinTopup())})
 		return
 	}
-	payMoney := getStripePayMoney(float64(req.Amount))
+	config, err := getStripeCurrencyConfig(req.Currency)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": err.Error()})
+		return
+	}
+	payMoney := getStripePayMoney(float64(req.Amount), config.UnitPrice)
 	if payMoney <= 0.01 {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "充值金额过低"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', 2, 64)})
+	precision := 2
+	if config.Currency == "JPY" {
+		precision = 0
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "success", "data": strconv.FormatFloat(payMoney, 'f', precision, 64)})
 }
 
 func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
@@ -66,6 +77,11 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	}
 	if req.Amount > 10000 {
 		c.JSON(http.StatusOK, gin.H{"message": "充值数量不能大于 10000", "data": 10})
+		return
+	}
+	config, err := getStripeCurrencyConfig(req.Currency)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": err.Error()})
 		return
 	}
 
@@ -86,9 +102,9 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 	reference := fmt.Sprintf("new-api-ref-%d-%d-%s", user.Id, time.Now().UnixMilli(), randstr.String(4))
 	referenceId := "ref_" + common.Sha1([]byte(reference))
 
-	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount, req.SuccessURL, req.CancelURL)
+	payLink, err := genStripeLink(referenceId, user.StripeCustomer, user.Email, req.Amount, config.PriceID, req.SuccessURL, req.CancelURL)
 	if err != nil {
-		logger.LogError(c.Request.Context(), fmt.Sprintf("Stripe 创建 Checkout Session 失败 user_id=%d trade_no=%s amount=%d error=%q", id, referenceId, req.Amount, err.Error()))
+		logger.LogError(c.Request.Context(), fmt.Sprintf("Stripe 创建 Checkout Session 失败 user_id=%d trade_no=%s amount=%d currency=%s error=%q", id, referenceId, req.Amount, config.Currency, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
 	}
@@ -109,7 +125,7 @@ func (*StripeAdaptor) RequestPay(c *gin.Context, req *StripePayRequest) {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "创建订单失败"})
 		return
 	}
-	logger.LogInfo(c.Request.Context(), fmt.Sprintf("Stripe 充值订单创建成功 user_id=%d trade_no=%s amount=%d money=%.2f", id, referenceId, req.Amount, chargedMoney))
+	logger.LogInfo(c.Request.Context(), fmt.Sprintf("Stripe 充值订单创建成功 user_id=%d trade_no=%s amount=%d currency=%s pay_money=%.2f credit_money=%.2f", id, referenceId, req.Amount, config.Currency, getStripePayMoney(float64(req.Amount), config.UnitPrice), chargedMoney))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "success",
 		"data": gin.H{
@@ -328,11 +344,12 @@ func sessionExpired(ctx context.Context, event stripe.Event) {
 //   - customerId: existing Stripe customer ID (empty string if new customer)
 //   - email: customer email address for new customer creation
 //   - amount: quantity of units to purchase
+//   - priceID: configured Stripe Price ID for the selected currency
 //   - successURL: custom URL to redirect after successful payment (empty for default)
 //   - cancelURL: custom URL to redirect when payment is canceled (empty for default)
 //
 // Returns the checkout session URL or an error if the session creation fails.
-func genStripeLink(referenceId string, customerId string, email string, amount int64, successURL string, cancelURL string) (string, error) {
+func genStripeLink(referenceId string, customerId string, email string, amount int64, priceID string, successURL string, cancelURL string) (string, error) {
 	if !strings.HasPrefix(setting.StripeApiSecret, "sk_") && !strings.HasPrefix(setting.StripeApiSecret, "rk_") {
 		return "", fmt.Errorf("无效的Stripe API密钥")
 	}
@@ -353,7 +370,7 @@ func genStripeLink(referenceId string, customerId string, email string, amount i
 		CancelURL:         stripe.String(cancelURL),
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
-				Price:    stripe.String(setting.StripePriceId),
+				Price:    stripe.String(priceID),
 				Quantity: stripe.Int64(amount),
 			},
 		},
@@ -388,7 +405,35 @@ func GetChargedAmount(count float64, user model.User) float64 {
 	return count * topUpGroupRatio
 }
 
-func getStripePayMoney(amount float64) float64 {
+type stripeCurrencyConfig struct {
+	Currency  string
+	PriceID   string
+	UnitPrice float64
+}
+
+func getStripeCurrencyConfig(currency string) (stripeCurrencyConfig, error) {
+	switch strings.ToUpper(strings.TrimSpace(currency)) {
+	case "", "USD":
+		if strings.TrimSpace(setting.StripePriceId) == "" {
+			return stripeCurrencyConfig{}, errors.New("Stripe USD 价格未配置")
+		}
+		return stripeCurrencyConfig{Currency: "USD", PriceID: setting.StripePriceId, UnitPrice: setting.StripeUnitPrice}, nil
+	case "CNY":
+		if strings.TrimSpace(setting.StripePriceIdCNY) == "" {
+			return stripeCurrencyConfig{}, errors.New("Stripe CNY 价格未配置")
+		}
+		return stripeCurrencyConfig{Currency: "CNY", PriceID: setting.StripePriceIdCNY, UnitPrice: setting.StripeUnitPriceCNY}, nil
+	case "JPY":
+		if strings.TrimSpace(setting.StripePriceIdJPY) == "" {
+			return stripeCurrencyConfig{}, errors.New("Stripe JPY 价格未配置")
+		}
+		return stripeCurrencyConfig{Currency: "JPY", PriceID: setting.StripePriceIdJPY, UnitPrice: setting.StripeUnitPriceJPY}, nil
+	default:
+		return stripeCurrencyConfig{}, errors.New("不支持的 Stripe 支付币种")
+	}
+}
+
+func getStripePayMoney(amount float64, unitPrice float64) float64 {
 	originalAmount := amount
 	if operation_setting.GetQuotaDisplayType() == operation_setting.QuotaDisplayTypeTokens {
 		amount = amount / common.QuotaPerUnit
@@ -400,7 +445,7 @@ func getStripePayMoney(amount float64) float64 {
 			discount = ds
 		}
 	}
-	payMoney := amount * setting.StripeUnitPrice * discount
+	payMoney := amount * unitPrice * discount
 	return payMoney
 }
 

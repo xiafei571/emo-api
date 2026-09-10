@@ -114,10 +114,23 @@ func GetTopUpInfo(c *gin.Context) {
 			}
 			return nil
 		}(),
-		"creem_products":          setting.CreemProducts,
-		"pay_methods":             payMethods,
-		"min_topup":               operation_setting.MinTopUp,
-		"stripe_min_topup":        setting.StripeMinTopUp,
+		"creem_products":   setting.CreemProducts,
+		"pay_methods":      payMethods,
+		"min_topup":        operation_setting.MinTopUp,
+		"stripe_min_topup": setting.StripeMinTopUp,
+		"stripe_currencies": func() []string {
+			currencies := make([]string, 0, 3)
+			if setting.StripePriceId != "" {
+				currencies = append(currencies, "USD")
+			}
+			if setting.StripePriceIdCNY != "" {
+				currencies = append(currencies, "CNY")
+			}
+			if setting.StripePriceIdJPY != "" {
+				currencies = append(currencies, "JPY")
+			}
+			return currencies
+		}(),
 		"waffo_min_topup":         setting.WaffoMinTopUp,
 		"waffo_pancake_min_topup": setting.WaffoPancakeMinTopUp,
 		"amount_options":          operation_setting.GetPaymentSetting().AmountOptions,

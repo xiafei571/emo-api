@@ -35,7 +35,7 @@ import {
   isWaffoPancakePayment,
   submitPaymentForm,
 } from '../lib'
-import type { AmountRequest, AmountResponse } from '../types'
+import type { AmountRequest, AmountResponse, StripeCurrency } from '../types'
 
 // ============================================================================
 // Payment Hook
@@ -60,6 +60,7 @@ const defaultPaymentAmountCalculators: PaymentAmountCalculators = {
 export async function requestPaymentAmount(
   topupAmount: number,
   paymentType: string,
+  currency?: StripeCurrency,
   calculators: PaymentAmountCalculators = defaultPaymentAmountCalculators
 ): Promise<number> {
   let calculator = calculators.regular
@@ -71,7 +72,7 @@ export async function requestPaymentAmount(
     calculator = calculators.waffoPancake
   }
 
-  const response = await calculator({ amount: topupAmount })
+  const response = await calculator({ amount: topupAmount, currency })
   if (!isApiSuccess(response) || !response.data) {
     return 0
   }
@@ -86,12 +87,17 @@ export function usePayment() {
 
   // Calculate payment amount
   const calculatePaymentAmount = useCallback(
-    async (topupAmount: number, paymentType: string) => {
+    async (
+      topupAmount: number,
+      paymentType: string,
+      currency?: StripeCurrency
+    ) => {
       try {
         setCalculating(true)
         const calculatedAmount = await requestPaymentAmount(
           topupAmount,
-          paymentType
+          paymentType,
+          currency
         )
         setAmount(calculatedAmount)
         return calculatedAmount
@@ -107,7 +113,11 @@ export function usePayment() {
 
   // Process payment
   const processPayment = useCallback(
-    async (topupAmount: number, paymentType: string) => {
+    async (
+      topupAmount: number,
+      paymentType: string,
+      currency?: StripeCurrency
+    ) => {
       try {
         setProcessing(true)
 
@@ -118,6 +128,7 @@ export function usePayment() {
           ? await requestStripePayment({
               amount,
               payment_method: 'stripe',
+              currency,
             })
           : await requestPayment({
               amount,

@@ -295,7 +295,11 @@ export type BillingSettings = {
   StripeApiSecret: string
   StripeWebhookSecret: string
   StripePriceId: string
+  StripePriceIdCNY: string
+  StripePriceIdJPY: string
   StripeUnitPrice: number
+  StripeUnitPriceCNY: number
+  StripeUnitPriceJPY: number
   StripeMinTopUp: number
   StripePromotionCodesEnabled: boolean
   CreemApiKey: string

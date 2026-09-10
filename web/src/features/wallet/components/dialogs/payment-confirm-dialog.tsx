@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { NativeSelect, NativeSelectOption } from '@/components/ui/native-select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { toIntlLocale } from '@/i18n/languages'
 import { formatNumber } from '@/lib/format'
 
 import type { PaymentMethodOption } from '../../types'
@@ -64,7 +65,7 @@ export function PaymentConfirmDialog({
   calculating,
   processing,
 }: PaymentConfirmDialogProps) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const selectedOption = paymentOptions.find(
     (option) => option.value === selectedPaymentOptionValue
   )
@@ -91,7 +92,17 @@ export function PaymentConfirmDialog({
             ) : (
               <div className='flex items-baseline gap-2'>
                 <span className='text-xl font-semibold'>
-                  {formatNumber(paymentAmount || topupAmount)} {currencyUnit}
+                  {['USD', 'CNY', 'JPY'].includes(currencyUnit)
+                    ? new Intl.NumberFormat(
+                        toIntlLocale(i18n.resolvedLanguage ?? i18n.language),
+                        {
+                          style: 'currency',
+                          currency: currencyUnit,
+                          minimumFractionDigits: currencyUnit === 'JPY' ? 0 : 2,
+                          maximumFractionDigits: currencyUnit === 'JPY' ? 0 : 2,
+                        }
+                      ).format(paymentAmount || topupAmount)
+                    : `${formatNumber(paymentAmount || topupAmount)} ${currencyUnit}`}
                 </span>
               </div>
             )}

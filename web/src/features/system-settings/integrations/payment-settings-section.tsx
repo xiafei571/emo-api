@@ -144,7 +144,11 @@ const paymentSchema = z.object({
   StripeApiSecret: z.string(),
   StripeWebhookSecret: z.string(),
   StripePriceId: z.string(),
+  StripePriceIdCNY: z.string(),
+  StripePriceIdJPY: z.string(),
   StripeUnitPrice: z.coerce.number().min(0),
+  StripeUnitPriceCNY: z.coerce.number().min(0),
+  StripeUnitPriceJPY: z.coerce.number().min(0),
   StripeMinTopUp: z.coerce.number().min(0),
   StripePromotionCodesEnabled: z.boolean(),
   CreemApiKey: z.string(),
@@ -430,7 +434,11 @@ export function PaymentSettingsSection({
       StripeApiSecret: values.StripeApiSecret.trim(),
       StripeWebhookSecret: values.StripeWebhookSecret.trim(),
       StripePriceId: values.StripePriceId.trim(),
+      StripePriceIdCNY: values.StripePriceIdCNY.trim(),
+      StripePriceIdJPY: values.StripePriceIdJPY.trim(),
       StripeUnitPrice: values.StripeUnitPrice,
+      StripeUnitPriceCNY: values.StripeUnitPriceCNY,
+      StripeUnitPriceJPY: values.StripeUnitPriceJPY,
       StripeMinTopUp: values.StripeMinTopUp,
       StripePromotionCodesEnabled: values.StripePromotionCodesEnabled,
       CreemApiKey: values.CreemApiKey.trim(),
@@ -474,7 +482,11 @@ export function PaymentSettingsSection({
       StripeApiSecret: initialRef.current.StripeApiSecret.trim(),
       StripeWebhookSecret: initialRef.current.StripeWebhookSecret.trim(),
       StripePriceId: initialRef.current.StripePriceId.trim(),
+      StripePriceIdCNY: initialRef.current.StripePriceIdCNY.trim(),
+      StripePriceIdJPY: initialRef.current.StripePriceIdJPY.trim(),
       StripeUnitPrice: initialRef.current.StripeUnitPrice,
+      StripeUnitPriceCNY: initialRef.current.StripeUnitPriceCNY,
+      StripeUnitPriceJPY: initialRef.current.StripeUnitPriceJPY,
       StripeMinTopUp: initialRef.current.StripeMinTopUp,
       StripePromotionCodesEnabled:
         initialRef.current.StripePromotionCodesEnabled,
@@ -583,8 +595,36 @@ export function PaymentSettingsSection({
       updates.push({ key: 'StripePriceId', value: sanitized.StripePriceId })
     }
 
+    if (sanitized.StripePriceIdCNY !== initial.StripePriceIdCNY) {
+      updates.push({
+        key: 'StripePriceIdCNY',
+        value: sanitized.StripePriceIdCNY,
+      })
+    }
+
+    if (sanitized.StripePriceIdJPY !== initial.StripePriceIdJPY) {
+      updates.push({
+        key: 'StripePriceIdJPY',
+        value: sanitized.StripePriceIdJPY,
+      })
+    }
+
     if (sanitized.StripeUnitPrice !== initial.StripeUnitPrice) {
       updates.push({ key: 'StripeUnitPrice', value: sanitized.StripeUnitPrice })
+    }
+
+    if (sanitized.StripeUnitPriceCNY !== initial.StripeUnitPriceCNY) {
+      updates.push({
+        key: 'StripeUnitPriceCNY',
+        value: sanitized.StripeUnitPriceCNY,
+      })
+    }
+
+    if (sanitized.StripeUnitPriceJPY !== initial.StripeUnitPriceJPY) {
+      updates.push({
+        key: 'StripeUnitPriceJPY',
+        value: sanitized.StripeUnitPriceJPY,
+      })
     }
 
     if (sanitized.StripeMinTopUp !== initial.StripeMinTopUp) {
@@ -1355,7 +1395,7 @@ export function PaymentSettingsSection({
                     name='StripePriceId'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('Price ID')}</FormLabel>
+                        <FormLabel>{t('USD Price ID')}</FormLabel>
                         <FormControl>
                           <Input
                             placeholder={t('price_xxx')}
@@ -1372,6 +1412,40 @@ export function PaymentSettingsSection({
                       </FormItem>
                     )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name='StripePriceIdCNY'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('CNY Price ID')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('price_xxx')} {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Stripe product price ID')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='StripePriceIdJPY'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('JPY Price ID')}</FormLabel>
+                        <FormControl>
+                          <Input placeholder={t('price_xxx')} {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Stripe product price ID')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className='grid gap-6 md:grid-cols-3'>
@@ -1380,9 +1454,7 @@ export function PaymentSettingsSection({
                     name='StripeUnitPrice'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>
-                          {t('Unit price (local currency / USD)')}
-                        </FormLabel>
+                        <FormLabel>{t('USD unit price')}</FormLabel>
                         <FormControl>
                           <Input
                             type='number'
@@ -1393,6 +1465,50 @@ export function PaymentSettingsSection({
                         </FormControl>
                         <FormDescription>
                           {t('e.g., 8 means 8 local currency per USD')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='StripeUnitPriceCNY'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('CNY unit price')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            step='0.01'
+                            min={0}
+                            {...safeNumberFieldProps(field)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Payment amount for each credit unit')}
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name='StripeUnitPriceJPY'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{t('JPY unit price')}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type='number'
+                            step='1'
+                            min={0}
+                            {...safeNumberFieldProps(field)}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          {t('Payment amount for each credit unit')}
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
