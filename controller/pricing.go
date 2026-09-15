@@ -59,10 +59,14 @@ func getPricingResponse(c *gin.Context, filterByUser bool) gin.H {
 	if filterByUser {
 		pricing = filterPricingByUsableGroups(pricing, usableGroup)
 	}
-	// check groupRatio contains usableGroup
-	for group := range ratio_setting.GetGroupRatioCopy() {
-		if _, ok := usableGroup[group]; !ok {
-			delete(groupRatio, group)
+	// The authenticated pricing endpoint is scoped to the user's usable groups.
+	// The public discount catalog must retain every configured group, including
+	// default, so its model cards can show the complete price comparison.
+	if filterByUser {
+		for group := range ratio_setting.GetGroupRatioCopy() {
+			if _, ok := usableGroup[group]; !ok {
+				delete(groupRatio, group)
+			}
 		}
 	}
 
