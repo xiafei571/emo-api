@@ -54,11 +54,11 @@ const copy: Record<string, DiscountCopy> = {
     groups: '价格分组',
     models: '可用模型',
     bestDeal: '最高优惠',
-    note: '同一模型的 default 与优惠分组在同一张卡片内对比。',
+    note: '完整收录 default 模型；同一模型的其他分组在卡片内直接对比。',
     input: '输入',
     output: '输出',
     request: '每次请求',
-    details: '跨分组价格对比',
+    details: '模型与分组价格',
     group: '分组',
     standard: '原价',
     categories: {
@@ -81,11 +81,11 @@ const copy: Record<string, DiscountCopy> = {
     groups: 'Price groups',
     models: 'Available models',
     bestDeal: 'Best deal',
-    note: 'Compare default and discounted groups for the same model in one card.',
+    note: 'All default models are included; other group prices appear in the same card.',
     input: 'Input',
     output: 'Output',
     request: 'Per request',
-    details: 'Prices across groups',
+    details: 'Models and group prices',
     group: 'Group',
     standard: 'List price',
     categories: {
@@ -108,11 +108,11 @@ const copy: Record<string, DiscountCopy> = {
     groups: '価格グループ',
     models: '利用可能モデル',
     bestDeal: '最大割引',
-    note: '同じモデルの default と割引グループを一つのカードで比較します。',
+    note: 'default の全モデルを掲載し、他グループの価格も同じカードで比較します。',
     input: '入力',
     output: '出力',
     request: 'リクエストごと',
-    details: 'グループ別料金比較',
+    details: 'モデルとグループ料金',
     group: 'グループ',
     standard: '通常価格',
     categories: {
@@ -241,7 +241,7 @@ export function DiscountModels() {
 
         return { model, groups, category: getCategory(model.model_name) }
       })
-      .filter((item) => item.groups.some(({ ratio }) => ratio < 1))
+      .filter((item) => item.groups.length > 0)
       .sort((a, b) => {
         const categoryDiff =
           categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category)
