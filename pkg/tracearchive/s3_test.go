@@ -134,3 +134,31 @@ func TestS3InventoryPaginatesAndAggregatesWithoutReadingObjects(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int32(2), requests.Load(), "cached inventory must not list S3 again")
 }
+
+func TestS3InventoryBackfillPersistsPages(t *testing.T) {
+	var requests atomic.Int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request := requests.Add(1)
+		w.Header().Set("Content-Type", "application/xml")
+		if request == 1 {
+			assert.Empty(t, r.URL.Query().Get("continuation-token"))
+			_, _ = w.Write([]byte(`<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>next</NextContinuationToken><Contents><Key>raw/v1/user=1/session=unknown/date=2026-09-21/one.jsonl.gz</Key><LastModified>2026-09-21T01:00:00Z</LastModified><Size>100</Size></Contents></ListBucketResult>`))
+			return
+		}
+		assert.Equal(t, "next", r.URL.Query().Get("continuation-token"))
+		_, _ = w.Write([]byte(`<ListBucketResult><IsTruncated>false</IsTruncated><Contents><Key>raw/v1/user=2/session=session-a/date=2026-09-22/two.jsonl.gz</Key><LastModified>2026-09-22T02:00:00Z</LastModified><Size>250</Size></Contents></ListBucketResult>`))
+	}))
+	defer server.Close()
+
+	cfg := testConfig(t)
+	cfg.Endpoint = server.URL
+	uploader := NewS3Uploader(cfg).(*s3Uploader)
+	uploader.client.Transport = server.Client().Transport
+	store := &inventoryStoreStub{}
+
+	require.NoError(t, uploader.BackfillInventory(context.Background(), store))
+	assert.Equal(t, int32(2), requests.Load())
+	require.Len(t, store.objects, 2)
+	assert.Equal(t, "raw/v1/user=1/session=unknown/date=2026-09-21/one.jsonl.gz", store.objects[0].Key)
+	assert.Equal(t, int64(250), store.objects[1].CompressedBytes)
+}

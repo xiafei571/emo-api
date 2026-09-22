@@ -23,6 +23,19 @@ type uploadFunc func(context.Context, string, string) error
 
 func (f uploadFunc) Upload(ctx context.Context, key, file string) error { return f(ctx, key, file) }
 
+type inventoryStoreStub struct {
+	objects []ArchivedObject
+}
+
+func (s *inventoryStoreStub) RecordUploadedObjects(_ context.Context, objects []ArchivedObject) error {
+	s.objects = append(s.objects, objects...)
+	return nil
+}
+
+func (s *inventoryStoreStub) Inventory(context.Context) (InventoryStats, error) {
+	return InventoryStats{Objects: int64(len(s.objects))}, nil
+}
+
 func testConfig(t *testing.T) Config {
 	return Config{Enabled: true, SpoolDir: t.TempDir(), Bucket: "test-bucket", Prefix: "raw/v1", Region: "us-east-1", AccessKey: "test", SecretKey: "test", Workers: 2, MaxRequestBytes: 1 << 20, MaxSpoolBytes: 16 << 20, ScanInterval: time.Second, UploadTimeout: time.Second}
 }
@@ -111,6 +124,29 @@ func TestArchiveLosslessUploadRetryAndRecovery(t *testing.T) {
 	assert.Equal(t, 9, last.End.Usage.CompletionTokens)
 	assert.NoFileExists(t, packed)
 	assert.Zero(t, a.Stats().SpoolBytes)
+}
+
+func TestArchiveRecordsUploadedObjectForIncrementalInventory(t *testing.T) {
+	cfg := testConfig(t)
+	store := &inventoryStoreStub{}
+	uploader := uploadFunc(func(context.Context, string, string) error { return nil })
+	archive, err := Open(cfg, uploader, WithInventoryStore(store))
+	require.NoError(t, err)
+	defer archive.Close()
+
+	now := time.Date(2026, 9, 22, 4, 0, 0, 0, time.UTC)
+	recorder, err := archive.Begin(Metadata{UserID: 42, SessionID: "session", Method: "POST", Path: "/v1/responses"}, now)
+	require.NoError(t, err)
+	recorder.Finish(End{Status: 200, CaptureComplete: true})
+	ready := strings.TrimSuffix(recorder.path, ".open") + ".ready"
+	require.NoError(t, archive.upload(ready))
+
+	require.Len(t, store.objects, 1)
+	assert.Contains(t, store.objects[0].Key, "raw/v1/user=42/")
+	assert.Greater(t, store.objects[0].CompressedBytes, int64(0))
+	stats, err := archive.Inventory(context.Background(), false)
+	require.NoError(t, err)
+	assert.Equal(t, int64(1), stats.Objects)
 }
 
 func TestCrashRecoveryAndExclusiveSpool(t *testing.T) {

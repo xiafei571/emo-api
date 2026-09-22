@@ -184,6 +184,37 @@ func (u *s3Uploader) fetchInventory(ctx context.Context) (InventoryStats, error)
 	return stats, nil
 }
 
+func (u *s3Uploader) BackfillInventory(ctx context.Context, store InventoryStore) error {
+	continuationToken := ""
+	for {
+		page, err := u.listInventoryPage(ctx, continuationToken)
+		if err != nil {
+			return err
+		}
+		objects := make([]ArchivedObject, 0, len(page.Contents))
+		for _, object := range page.Contents {
+			if !strings.HasSuffix(object.Key, ".jsonl.gz") {
+				continue
+			}
+			objects = append(objects, ArchivedObject{
+				Key: object.Key, CompressedBytes: object.Size, UploadedAt: object.LastModified,
+			})
+		}
+		if len(objects) > 0 {
+			if err = store.RecordUploadedObjects(ctx, objects); err != nil {
+				return fmt.Errorf("record S3 inventory page: %w", err)
+			}
+		}
+		if !page.IsTruncated {
+			return nil
+		}
+		if page.NextContinuationToken == "" || page.NextContinuationToken == continuationToken {
+			return fmt.Errorf("S3 LIST returned an invalid continuation token")
+		}
+		continuationToken = page.NextContinuationToken
+	}
+}
+
 type s3InventoryPage struct {
 	IsTruncated           bool   `xml:"IsTruncated"`
 	NextContinuationToken string `xml:"NextContinuationToken"`
@@ -223,7 +254,7 @@ func (u *s3Uploader) listInventoryPage(ctx context.Context, continuationToken st
 	}
 	resp, err := u.client.Do(req)
 	if err != nil {
-		return s3InventoryPage{}, fmt.Errorf("S3 LIST transport failed")
+		return s3InventoryPage{}, fmt.Errorf("S3 LIST transport failed: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {

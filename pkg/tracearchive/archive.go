@@ -23,9 +23,33 @@ type retryState struct {
 	after    time.Time
 }
 
+type ArchivedObject struct {
+	Key             string
+	CompressedBytes int64
+	UploadedAt      time.Time
+}
+
+type InventoryStore interface {
+	RecordUploadedObjects(context.Context, []ArchivedObject) error
+	Inventory(context.Context) (InventoryStats, error)
+}
+
+type InventoryBackfiller interface {
+	BackfillInventory(context.Context, InventoryStore) error
+}
+
+type Option func(*Archive)
+
+func WithInventoryStore(store InventoryStore) Option {
+	return func(archive *Archive) {
+		archive.inventoryStore = store
+	}
+}
+
 type Archive struct {
 	cfg                                          Config
 	uploader                                     Uploader
+	inventoryStore                               InventoryStore
 	lock                                         *os.File
 	cancel                                       context.CancelFunc
 	ctx                                          context.Context
@@ -38,6 +62,7 @@ type Archive struct {
 	busy                                         map[string]bool
 	retries                                      map[string]retryState
 	bytes, started, finished, uploaded, failures atomic.Int64
+	backfillRunning                              atomic.Bool
 }
 
 type Stats struct {
@@ -76,6 +101,12 @@ func (a *Archive) Stats() Stats {
 }
 
 func (a *Archive) Inventory(ctx context.Context, refresh bool) (InventoryStats, error) {
+	if a.inventoryStore != nil {
+		if refresh {
+			a.startInventoryBackfill()
+		}
+		return a.inventoryStore.Inventory(ctx)
+	}
 	provider, ok := a.uploader.(InventoryProvider)
 	if !ok {
 		return InventoryStats{}, fmt.Errorf("archive uploader does not support inventory")
@@ -83,8 +114,21 @@ func (a *Archive) Inventory(ctx context.Context, refresh bool) (InventoryStats, 
 	return provider.Inventory(ctx, refresh)
 }
 
+func (a *Archive) startInventoryBackfill() {
+	backfiller, ok := a.uploader.(InventoryBackfiller)
+	if !ok || a.inventoryStore == nil || !a.backfillRunning.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer a.backfillRunning.Store(false)
+		if err := backfiller.BackfillInventory(a.ctx, a.inventoryStore); err != nil && a.ctx.Err() == nil {
+			a.failure("inventory_backfill_failed", err.Error())
+		}
+	}()
+}
+
 // Open performs recovery before any requests or background workers can access the spool.
-func Open(cfg Config, uploader Uploader) (*Archive, error) {
+func Open(cfg Config, uploader Uploader, options ...Option) (*Archive, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -109,6 +153,9 @@ func Open(cfg Config, uploader Uploader) (*Archive, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	a := &Archive{cfg: cfg, uploader: uploader, lock: lock, ctx: ctx, cancel: cancel,
 		notify: make(chan struct{}, 1), jobs: make(chan string, cfg.Workers), busy: map[string]bool{}, retries: map[string]retryState{}}
+	for _, option := range options {
+		option(a)
+	}
 	var openFiles, temps []string
 	err = filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -343,6 +390,19 @@ func (a *Archive) upload(path string) error {
 	defer cancel()
 	if err = a.uploader.Upload(ctx, filepath.ToSlash(key), packed); err != nil {
 		return err
+	}
+	if a.inventoryStore != nil {
+		info, statErr := os.Stat(packed)
+		if statErr != nil {
+			return statErr
+		}
+		object := ArchivedObject{
+			Key:             strings.Trim(a.cfg.Prefix, "/") + "/" + filepath.ToSlash(key),
+			CompressedBytes: info.Size(), UploadedAt: time.Now().UTC(),
+		}
+		if err = a.inventoryStore.RecordUploadedObjects(ctx, []ArchivedObject{object}); err != nil {
+			return fmt.Errorf("record uploaded archive inventory: %w", err)
+		}
 	}
 	if err = a.remove(packed); err != nil {
 		return err

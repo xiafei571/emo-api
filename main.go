@@ -184,7 +184,11 @@ func main() {
 		return
 	}
 	if archiveConfig.Enabled {
-		archive, err := tracearchive.Open(archiveConfig, tracearchive.NewS3Uploader(archiveConfig))
+		archive, err := tracearchive.Open(
+			archiveConfig,
+			tracearchive.NewS3Uploader(archiveConfig),
+			tracearchive.WithInventoryStore(model.TraceArchiveInventoryStore{}),
+		)
 		if err != nil {
 			common.FatalLog("failed to initialize trace archive: " + err.Error())
 			return
