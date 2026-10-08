@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import dayjs from 'dayjs'
 
-import type { BillRange, UserBill } from '../types'
+import type { BillRange, BillUsage, UserBill } from '../types'
 
 export function getBillRange(
   months: number,
@@ -73,6 +73,20 @@ export function formatBillMoney(units: number): string {
   }).format(units)
 }
 
+// This observed cost blends all charge components. It is a reference, not an
+// inferred input/output/cache tariff; refunds do not change historical rates.
+export function getBillBlendedPrice(
+  usage: BillUsage,
+  quotaPerUnit: number
+): number | undefined {
+  const tokens = usage.prompt_tokens + usage.completion_tokens
+  if (tokens <= 0 || quotaPerUnit <= 0 || usage.charged_quota < 0) {
+    return undefined
+  }
+  const price = (usage.charged_quota / quotaPerUnit / tokens) * 1_000_000
+  return Number.isFinite(price) ? price : undefined
+}
+
 // Quote every cell and neutralize spreadsheet formulas in user/model/order strings.
 export function billToCSV(bill: UserBill): string {
   const rows: (string | number)[][] = [
@@ -102,7 +116,7 @@ export function billToCSV(bill: UserBill): string {
     ['Net cost', bill.totals.net_quota / bill.quota_per_unit],
     [
       'Price basis',
-      'Historical USD/M rates include effective group discounts. Ranges indicate different rates in the period. Missing metadata, per-call and dynamic billing cannot provide token rates.',
+      'Historical USD/M rates include effective group discounts. Ranges indicate different rates in the period. Saved dynamic expressions and matched tiers are used when recoverable. Missing input/output rates show a blended reference: charges divided by recorded input plus output tokens, including cache and other fees. This is not a separate input/output tariff and cannot be directly compared with official prices. Refunds are excluded.',
     ],
     [
       'Scope',
@@ -125,9 +139,15 @@ export function billToCSV(bill: UserBill): string {
       'Cache write 5m price (USD/M)',
       'Cache write 1h price (USD/M)',
       'Requests without historical token prices',
+      'Blended cost (USD/M)',
     ],
   ]
   for (const usage of bill.daily) {
+    const blended = getBillBlendedPrice(usage, bill.quota_per_unit)
+    const reference =
+      blended === undefined
+        ? 'Cannot calculate: no token usage'
+        : `Blended reference: ${formatBillPrice({ min: blended, max: blended })}`
     rows.push([
       usage.date,
       usage.model,
@@ -144,8 +164,14 @@ export function billToCSV(bill: UserBill): string {
         'cache_write',
         'cache_write_5m',
         'cache_write_1h',
-      ].map((key) => formatBillPrice(usage.prices?.[key])),
+      ].map((key) => {
+        if (usage.prices?.[key]) return formatBillPrice(usage.prices[key])
+        return key === 'input' || key === 'output'
+          ? reference
+          : 'Not separately recorded'
+      }),
       usage.unpriced_requests ?? 0,
+      blended ?? 'Cannot calculate: no token usage',
     ])
   }
   rows.push([], ['Recharge date', 'Order', 'Payment method', 'Credits (USD)'])

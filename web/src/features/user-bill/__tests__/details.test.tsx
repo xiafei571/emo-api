@@ -31,6 +31,13 @@ await i18next
   .init({ lng: 'en', resources: {}, fallbackLng: 'en' })
 
 describe('bill details', () => {
+  test('missing historical prices show a labeled blended reference and no price dashes', () => {
+    const html = renderToStaticMarkup(<BillDetails bill={billFixture} />)
+    assert.ok(html.includes('Blended cost (USD/M)'))
+    assert.ok(html.includes('Blended reference: 8333.3333333333'))
+    assert.ok(html.includes('Not separately recorded'))
+    assert.ok(!html.includes('>—</td>'))
+  })
   test('historical price columns display distinct input and output rates and ranges', () => {
     const html = renderToStaticMarkup(
       <BillDetails

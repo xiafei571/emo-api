@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"testing"
 	"time"
@@ -155,4 +156,46 @@ func TestHistoricalBillPricesDoNotInventMissingRatesAndAllowFreeRates(t *testing
 	}
 	prices := historicalBillPrices(`{"model_ratio":1,"group_ratio":1,"user_group_ratio":0,"completion_ratio":2}`)
 	assert.Equal(t, map[string]float64{"input": 0, "output": 0}, prices)
+}
+
+func TestUserBillRecoversSavedDynamicPrices(t *testing.T) {
+	db := setupUserBillDB(t)
+	user := User{Username: "dynamic-prices"}
+	require.NoError(t, db.Create(&user).Error)
+	start := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
+	expression := `v1:hour("UTC") < 12 ? tier("off_peak", p * 0.15 + c * 0.6 + cr * 0.003) : tier("peak", p * 0.3 + c * 1.2 + cr * 0.006)`
+	for _, tier := range []string{"off_peak", "peak"} {
+		other, err := common.Marshal(map[string]interface{}{
+			"billing_mode": "tiered_expr", "expr_b64": base64.StdEncoding.EncodeToString([]byte(expression)),
+			"matched_tier": tier, "group_ratio": 1, "user_group_ratio": 0.5,
+		})
+		require.NoError(t, err)
+		require.NoError(t, db.Create(&Log{UserId: user.Id, CreatedAt: start.Unix(), Type: LogTypeConsume, ModelName: "deepseek", Quota: 42, Other: string(other)}).Error)
+	}
+	bill, err := GetUserBill(context.Background(), user.Id, start, start.AddDate(0, 0, 1), time.UTC)
+	require.NoError(t, err)
+	require.Len(t, bill.Daily, 1)
+	assert.Equal(t, BillPriceRange{Min: 0.075, Max: 0.15}, bill.Daily[0].Prices["input"])
+	assert.Equal(t, BillPriceRange{Min: 0.3, Max: 0.6}, bill.Daily[0].Prices["output"])
+	assert.Equal(t, BillPriceRange{Min: 0.0015, Max: 0.003}, bill.Daily[0].Prices["cache_read"])
+	assert.Equal(t, int64(0), bill.Daily[0].UnpricedRequests)
+	assert.Equal(t, int64(84), bill.Daily[0].ChargedQuota)
+	assert.Equal(t, bill.Daily[0].Prices, bill.Models[0].Prices)
+}
+
+func TestHistoricalExpressionPricesRejectAmbiguousOrNonlinearRates(t *testing.T) {
+	for _, expression := range []string{
+		`tier("base", p * c)`,
+		`tier("base", p * 2 + 10)`,
+		`tier("base", p * 2) * 6`,
+		`tier("base", p * -2)`,
+		`tier("base", p / 0)`,
+		`len > 10 ? tier("base", p * 2) : tier("base", p * 3)`,
+		`tier("base", p * 2)|||when(header("x") == "y") * 6`,
+		`tier("different", p * 2)`,
+	} {
+		assert.Empty(t, historicalExpressionPrices(expression, "base", 1), expression)
+	}
+	assert.Equal(t, map[string]float64{"input": 0, "output": 2, "cache_write": 1.25, "cache_write_5m": 1.25, "cache_write_1h": 2},
+		historicalExpressionPrices(`p * 0 + (c * 4 + cc * 2.5 + cc1h * 4) / 2`, "", 1))
 }

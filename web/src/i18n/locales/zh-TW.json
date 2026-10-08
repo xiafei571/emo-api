@@ -5268,6 +5268,10 @@
     "Cache write 5m price (USD/M)": "缓存写入 5 分钟价格（美元/M）",
     "Cache write 1h price (USD/M)": "缓存写入 1 小时价格（美元/M）",
     "Requests without historical token prices": "缺少历史 token 单价的请求数",
-    "Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price.": "历史每百万 tokens 单价包含分组折扣。同一周期内有多个价格时显示区间；缺少计费信息、按次计费或动态计费时不推算单价。"
+    "Historical USD/M prices include group discounts and recoverable dynamic tiers. Missing input/output rates show a blended reference: charges divided by recorded input plus output tokens, including cache and other fees. It is not a separate input/output rate or a comparable official tariff. Refunds are excluded.": "历史每百万 tokens 单价包含分组折扣及可还原的动态计费档位。缺少输入／输出单价时显示综合参考均价：扣费金额除以记录的输入加输出 tokens，包含缓存及其他费用。它不是独立的输入／输出单价，不能直接与官方单价比较；退款不参与计算。",
+    "Blended cost (USD/M)": "综合均价（美元/M）",
+    "Blended reference: {{price}}": "综合参考均价：{{price}}",
+    "Not separately recorded": "未单独记录",
+    "Cannot calculate: no token usage": "无法计算：无 token 用量"
   }
 }

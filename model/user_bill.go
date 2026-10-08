@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"math"
@@ -30,8 +31,8 @@ type BillPriceRange struct {
 }
 
 // Historical per-million token rates include the effective group discount.
-// Missing metadata, dynamic expressions and per-call billing cannot be inferred
-// from total cost and token counts (cache and tool fees can contribute to cost).
+// Saved linear dynamic tiers can be recovered. Missing metadata and per-call
+// billing cannot be inferred from total cost and token counts alone.
 func historicalBillPrices(other string) map[string]float64 {
 	var metadata struct {
 		ModelRatio           *float64 `json:"model_ratio"`
@@ -44,15 +45,27 @@ func historicalBillPrices(other string) map[string]float64 {
 		CacheCreationRatio1h *float64 `json:"cache_creation_ratio_1h"`
 		ModelPrice           float64  `json:"model_price"`
 		BillingMode          string   `json:"billing_mode"`
+		ExprBase64           string   `json:"expr_b64"`
+		MatchedTier          string   `json:"matched_tier"`
 	}
-	if common.UnmarshalJsonStr(other, &metadata) != nil || metadata.ModelRatio == nil || metadata.ModelPrice > 0 || metadata.BillingMode == "tiered_expr" {
+	if common.UnmarshalJsonStr(other, &metadata) != nil {
 		return nil
 	}
 	group := metadata.GroupRatio
 	if metadata.UserGroupRatio != nil && *metadata.UserGroupRatio != -1 {
 		group = metadata.UserGroupRatio
 	}
-	if group == nil || *group < 0 || *metadata.ModelRatio < 0 {
+	if group == nil || *group < 0 || math.IsNaN(*group) || math.IsInf(*group, 0) {
+		return nil
+	}
+	if metadata.BillingMode == "tiered_expr" {
+		expression, err := base64.StdEncoding.DecodeString(metadata.ExprBase64)
+		if err != nil {
+			return nil
+		}
+		return historicalExpressionPrices(string(expression), metadata.MatchedTier, *group)
+	}
+	if metadata.ModelRatio == nil || *metadata.ModelRatio < 0 || metadata.ModelPrice > 0 {
 		return nil
 	}
 	base := *metadata.ModelRatio * 2 * *group

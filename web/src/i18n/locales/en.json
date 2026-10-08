@@ -5511,6 +5511,10 @@
     "Cache write 5m price (USD/M)": "Cache write 5m price (USD/M)",
     "Cache write 1h price (USD/M)": "Cache write 1h price (USD/M)",
     "Requests without historical token prices": "Requests without historical token prices",
-    "Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price.": "Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price."
+    "Historical USD/M prices include group discounts and recoverable dynamic tiers. Missing input/output rates show a blended reference: charges divided by recorded input plus output tokens, including cache and other fees. It is not a separate input/output rate or a comparable official tariff. Refunds are excluded.": "Historical USD/M prices include group discounts and recoverable dynamic tiers. Missing input/output rates show a blended reference: charges divided by recorded input plus output tokens, including cache and other fees. It is not a separate input/output rate or a comparable official tariff. Refunds are excluded.",
+    "Blended cost (USD/M)": "Blended cost (USD/M)",
+    "Blended reference: {{price}}": "Blended reference: {{price}}",
+    "Not separately recorded": "Not separately recorded",
+    "Cannot calculate: no token usage": "Cannot calculate: no token usage"
   }
 }

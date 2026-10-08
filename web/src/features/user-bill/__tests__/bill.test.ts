@@ -22,6 +22,7 @@ import { describe, test } from 'node:test'
 import {
   billToCSV,
   formatBillMoney,
+  getBillBlendedPrice,
   getBillRange,
   isValidBillRange,
 } from '../lib/bill'
@@ -99,5 +100,29 @@ test('export includes historical per-million rates and changed-price ranges with
     ],
   })
   assert.ok(csv.includes('"Input price (USD/M)"'))
-  assert.ok(csv.includes('"0.6 ~ 1.5","3 ~ 7.5","0.15","—","—","—","2"'))
+  assert.ok(
+    csv.includes(
+      '"0.6 ~ 1.5","3 ~ 7.5","0.15","Not separately recorded","Not separately recorded","Not separately recorded","2"'
+    )
+  )
+})
+
+test('missing rates export a labeled blended reference based on charges rather than net cost', () => {
+  const csv = billToCSV(billFixture)
+  assert.ok(csv.includes('"Blended cost (USD/M)"'))
+  assert.ok(csv.includes('"Blended reference: 8333.3333333333"'))
+  assert.ok(!csv.includes('"—"'))
+  assert.equal(getBillBlendedPrice(billFixture.daily[0], 500000), 1e6 / 120)
+  assert.equal(
+    getBillBlendedPrice({ ...billFixture.daily[0], charged_quota: 0 }, 500000),
+    0
+  )
+  assert.equal(
+    getBillBlendedPrice(
+      { ...billFixture.daily[0], prompt_tokens: 0, completion_tokens: 0 },
+      500000
+    ),
+    undefined
+  )
+  assert.equal(getBillBlendedPrice(billFixture.daily[0], 0), undefined)
 })

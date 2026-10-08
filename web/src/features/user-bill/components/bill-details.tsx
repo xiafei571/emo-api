@@ -18,7 +18,11 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useTranslation } from 'react-i18next'
 
-import { formatBillMoney, formatBillPrice } from '../lib/bill'
+import {
+  formatBillMoney,
+  formatBillPrice,
+  getBillBlendedPrice,
+} from '../lib/bill'
 import type { BillUsage, UserBill } from '../types'
 
 function UsageTable(props: {
@@ -48,6 +52,7 @@ function UsageTable(props: {
               t('Cache write 5m price (USD/M)'),
               t('Cache write 1h price (USD/M)'),
               t('Requests without historical token prices'),
+              t('Blended cost (USD/M)'),
             ].map((label) => (
               <th key={label} className='p-2'>
                 {label}
@@ -85,10 +90,17 @@ function UsageTable(props: {
                 'cache_write_1h',
               ].map((key) => (
                 <td key={key} className='p-2'>
-                  {formatBillPrice(row.prices?.[key])}
+                  <HistoricalPrice
+                    row={row}
+                    priceKey={key}
+                    quotaPerUnit={props.quotaPerUnit}
+                  />
                 </td>
               ))}
               <td className='p-2'>{row.unpriced_requests ?? 0}</td>
+              <td className='p-2'>
+                <BlendedReference row={row} quotaPerUnit={props.quotaPerUnit} />
+              </td>
             </tr>
           ))}
         </tbody>
@@ -100,6 +112,31 @@ function UsageTable(props: {
       )}
     </div>
   )
+}
+
+function HistoricalPrice(props: {
+  row: BillUsage
+  priceKey: string
+  quotaPerUnit: number
+}) {
+  const { t } = useTranslation()
+  const price = props.row.prices?.[props.priceKey]
+  if (price) return formatBillPrice(price)
+  if (props.priceKey === 'input' || props.priceKey === 'output') {
+    return (
+      <BlendedReference row={props.row} quotaPerUnit={props.quotaPerUnit} />
+    )
+  }
+  return t('Not separately recorded')
+}
+
+function BlendedReference(props: { row: BillUsage; quotaPerUnit: number }) {
+  const { t } = useTranslation()
+  const price = getBillBlendedPrice(props.row, props.quotaPerUnit)
+  if (price === undefined) return t('Cannot calculate: no token usage')
+  return t('Blended reference: {{price}}', {
+    price: formatBillPrice({ min: price, max: price }),
+  })
 }
 
 export function BillDetails(props: { bill: UserBill }) {
@@ -166,7 +203,7 @@ export function BillDetails(props: { bill: UserBill }) {
       <h3 className='font-medium'>{t('Usage by model')}</h3>
       <p className='text-muted-foreground text-xs'>
         {t(
-          'Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price.'
+          'Historical USD/M prices include group discounts and recoverable dynamic tiers. Missing input/output rates show a blended reference: charges divided by recorded input plus output tokens, including cache and other fees. It is not a separate input/output rate or a comparable official tariff. Refunds are excluded.'
         )}
       </p>
       <UsageTable
