@@ -229,7 +229,7 @@ export function DiscountModels() {
           </div>
         </header>
         {isLoading ? (
-          <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+          <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
             {[1, 2, 3, 4, 5, 6].map((item) => (
               <div
                 key={item}
@@ -250,7 +250,7 @@ export function DiscountModels() {
                     {section.items.length} {text.modelCount}
                   </span>
                 </div>
-                <div className='grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3'>
+                <div className='grid grid-cols-1 gap-4 lg:grid-cols-2'>
                   {section.items.map(({ model, groups }) => {
                     const iconKey = model.icon || model.vendor_icon
                     const perf = perfMap.get(model.model_name)
