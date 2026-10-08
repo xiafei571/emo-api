@@ -28,6 +28,7 @@ type Pricing struct {
 	CompletionRatio        float64                 `json:"completion_ratio"`
 	CacheRatio             *float64                `json:"cache_ratio,omitempty"`
 	CreateCacheRatio       *float64                `json:"create_cache_ratio,omitempty"`
+	CreateCache1hRatio     *float64                `json:"create_cache_1h_ratio,omitempty"`
 	ImageRatio             *float64                `json:"image_ratio,omitempty"`
 	AudioRatio             *float64                `json:"audio_ratio,omitempty"`
 	AudioCompletionRatio   *float64                `json:"audio_completion_ratio,omitempty"`
@@ -386,8 +387,15 @@ func updatePricing() {
 		if cacheRatio, ok := ratio_setting.GetCacheRatio(model); ok {
 			pricing.CacheRatio = &cacheRatio
 		}
-		if createCacheRatio, ok := ratio_setting.GetCreateCacheRatio(model); ok {
+		if pricing.QuotaType == 0 {
+			// Settlement applies the 1.25 fallback even when no override exists.
+			// The catalog must advertise the same cache-write contract.
+			createCacheRatio, _ := ratio_setting.GetCreateCacheRatio(model)
 			pricing.CreateCacheRatio = &createCacheRatio
+			if strings.HasPrefix(model, "claude-") {
+				cache1hRatio := createCacheRatio * (6.0 / 3.75)
+				pricing.CreateCache1hRatio = &cache1hRatio
+			}
 		}
 		if imageRatio, ok := ratio_setting.GetImageRatio(model); ok {
 			pricing.ImageRatio = &imageRatio

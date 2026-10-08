@@ -42,6 +42,7 @@ export type PricingModel = {
   model_price?: number
   cache_ratio?: number | null
   create_cache_ratio?: number | null
+  create_cache_1h_ratio?: number | null
   image_ratio?: number | null
   audio_ratio?: number | null
   audio_completion_ratio?: number | null

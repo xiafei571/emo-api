@@ -7,9 +7,24 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/relaykit/dto"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestPricingExposesSettlementCacheDefaults(t *testing.T) {
+	resetPricingEndpointTestTables(t)
+	previous := ratio_setting.CreateCacheRatio2JSONString()
+	require.NoError(t, ratio_setting.UpdateCreateCacheRatioByJSONString(`{}`))
+	t.Cleanup(func() { require.NoError(t, ratio_setting.UpdateCreateCacheRatioByJSONString(previous)) })
+	insertPricingEndpointChannel(t, 501, constant.ChannelTypeOpenAI, dto.ChannelOtherSettings{})
+	insertPricingEndpointAbility(t, 501, "claude-fable-5-1")
+	InitChannelCache()
+	pricing := GetPricing()
+	require.Len(t, pricing, 1)
+	require.NotNil(t, pricing[0].CreateCacheRatio)
+	assert.Equal(t, 1.25, *pricing[0].CreateCacheRatio)
+}
 
 func resetPricingEndpointTestTables(t *testing.T) {
 	t.Helper()
