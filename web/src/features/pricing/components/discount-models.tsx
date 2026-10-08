@@ -128,7 +128,7 @@ function getCategory(name: string) {
 
 export function DiscountModels() {
   const { i18n, t } = useTranslation()
-  const { models, groupRatio, isLoading } = usePricingData(
+  const { models, groupRatio, usableGroup, isLoading } = usePricingData(
     '/api/discount-pricing'
   )
   const perfQuery = useQuery({
@@ -318,6 +318,11 @@ export function DiscountModels() {
                                 model={model}
                                 group={group}
                                 ratio={ratio}
+                                description={
+                                  typeof usableGroup[group] === 'string'
+                                    ? usableGroup[group]
+                                    : usableGroup[group]?.desc
+                                }
                               />
                             ))}
                           </div>

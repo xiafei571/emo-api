@@ -43,11 +43,21 @@ const model: PricingModel = {
 
 test('dynamic group rows display discounted ranges and disclose peak schedule without tier controls', () => {
   const html = renderToStaticMarkup(
-    <DiscountPriceRow model={model} group='Deepseek' ratio={0.1} />
+    <DiscountPriceRow
+      model={model}
+      group='Deepseek'
+      ratio={0.1}
+      description='Group description & details'
+    />
   )
   assert.ok(html.includes('$0.15–$0.3'))
   assert.ok(html.includes('$0.45–$0.9'))
   assert.ok(html.includes('Deepseek'))
+  assert.ok(html.includes('Group description &amp; details'))
+  assert.ok(
+    html.indexOf('Group description &amp; details') <
+      html.indexOf('Dynamic pricing')
+  )
   assert.ok(html.includes('Monday–Friday'))
   assert.ok(html.includes('09:00–12:00, 14:00–18:00'))
   assert.ok(html.includes('Asia/Shanghai'))

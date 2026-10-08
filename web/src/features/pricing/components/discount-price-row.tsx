@@ -36,11 +36,13 @@ export function DiscountPriceRow(props: {
   model: PricingModel
   group: string
   ratio: number
+  description?: string
 }) {
   const { t } = useTranslation()
   const pricing = getDiscountPricing(props.model, props.ratio)
   const schedule = pricing.timeSchedule
   const isRequest = props.model.quota_type === 1 && !pricing.dynamic
+  const description = props.description?.trim()
   return (
     <div className='border-t px-3 py-2 first:border-t-0'>
       <div className='grid min-w-[460px] grid-cols-[minmax(104px,0.9fr)_repeat(4,minmax(86px,1fr))] items-start gap-1'>
@@ -68,6 +70,11 @@ export function DiscountPriceRow(props: {
           )
         })}
       </div>
+      {description && description !== '-' && (
+        <p className='text-muted-foreground mt-2 whitespace-pre-line break-words text-[10px] leading-relaxed'>
+          {description}
+        </p>
+      )}
       {pricing.dynamic && (
         <div className='text-muted-foreground mt-2 text-[10px]'>
           {t('Dynamic pricing · range includes all configured tiers')}
