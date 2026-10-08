@@ -47,7 +47,7 @@ test('dynamic group rows display discounted ranges and disclose peak schedule an
   )
   assert.ok(html.includes('$0.15–$0.3'))
   assert.ok(html.includes('$0.45–$0.9'))
-  assert.ok(html.includes('10% of billing base'))
+  assert.ok(html.includes('Deepseek'))
   assert.ok(html.includes('Monday–Friday'))
   assert.ok(html.includes('09:00–12:00, 14:00–18:00'))
   assert.ok(html.includes('Asia/Shanghai'))

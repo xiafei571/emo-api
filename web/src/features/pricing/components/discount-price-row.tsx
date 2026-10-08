@@ -69,11 +69,6 @@ export function DiscountPriceRow(props: {
           >
             {props.group}
           </div>
-          <div className='text-primary mt-1 text-[9px]'>
-            {t('{{percent}}% of billing base', {
-              percent: Number((props.ratio * 100).toFixed(2)),
-            })}
-          </div>
         </div>
         {columns.map((key) => {
           const rate = pricing.rates[key]
