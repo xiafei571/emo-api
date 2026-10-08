@@ -82,3 +82,22 @@ describe('bill periods and export', () => {
     assert.ok(csv.includes('"\' @SUM(1,2)\n""model"""'))
   })
 })
+
+test('export includes historical per-million rates and changed-price ranges without inferring missing rates', () => {
+  const csv = billToCSV({
+    ...billFixture,
+    daily: [
+      {
+        ...billFixture.daily[0],
+        prices: {
+          input: { min: 0.6, max: 1.5 },
+          output: { min: 3, max: 7.5 },
+          cache_read: { min: 0.15, max: 0.15 },
+        },
+        unpriced_requests: 2,
+      },
+    ],
+  })
+  assert.ok(csv.includes('"Input price (USD/M)"'))
+  assert.ok(csv.includes('"0.6 ~ 1.5","3 ~ 7.5","0.15","—","—","—","2"'))
+})

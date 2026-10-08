@@ -24,6 +24,8 @@ export interface BillUsage {
   charged_quota: number
   refunded_quota: number
   net_quota: number
+  prices?: Record<string, { min: number; max: number }>
+  unpriced_requests?: number
 }
 
 export interface BillRecharge {

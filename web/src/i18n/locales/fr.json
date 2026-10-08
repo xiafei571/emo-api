@@ -5260,6 +5260,14 @@
     "Start date": "Start date",
     "Timezone": "Timezone",
     "Unspecified": "Unspecified",
-    "Usage by model": "Usage by model"
+    "Usage by model": "Usage by model",
+    "Input price (USD/M)": "Input price (USD/M)",
+    "Output price (USD/M)": "Output price (USD/M)",
+    "Cache read price (USD/M)": "Cache read price (USD/M)",
+    "Cache write price (USD/M)": "Cache write price (USD/M)",
+    "Cache write 5m price (USD/M)": "Cache write 5m price (USD/M)",
+    "Cache write 1h price (USD/M)": "Cache write 1h price (USD/M)",
+    "Requests without historical token prices": "Requests without historical token prices",
+    "Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price.": "Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price."
   }
 }

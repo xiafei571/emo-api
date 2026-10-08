@@ -5503,6 +5503,14 @@
     "Start date": "开始日期",
     "Timezone": "时区",
     "Unspecified": "未注明",
-    "Usage by model": "模型用量汇总"
+    "Usage by model": "模型用量汇总",
+    "Input price (USD/M)": "输入价格（美元/M）",
+    "Output price (USD/M)": "输出价格（美元/M）",
+    "Cache read price (USD/M)": "缓存读取价格（美元/M）",
+    "Cache write price (USD/M)": "缓存写入价格（美元/M）",
+    "Cache write 5m price (USD/M)": "缓存写入 5 分钟价格（美元/M）",
+    "Cache write 1h price (USD/M)": "缓存写入 1 小时价格（美元/M）",
+    "Requests without historical token prices": "缺少历史 token 单价的请求数",
+    "Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price.": "历史每百万 tokens 单价包含分组折扣。同一周期内有多个价格时显示区间；缺少计费信息、按次计费或动态计费时不推算单价。"
   }
 }

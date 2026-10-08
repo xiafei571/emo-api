@@ -31,6 +31,30 @@ await i18next
   .init({ lng: 'en', resources: {}, fallbackLng: 'en' })
 
 describe('bill details', () => {
+  test('historical price columns display distinct input and output rates and ranges', () => {
+    const html = renderToStaticMarkup(
+      <BillDetails
+        bill={{
+          ...billFixture,
+          daily: [
+            {
+              ...billFixture.daily[0],
+              prices: {
+                input: { min: 0.6, max: 1.5 },
+                output: { min: 3, max: 7.5 },
+              },
+              unpriced_requests: 2,
+            },
+          ],
+        }}
+      />
+    )
+    assert.ok(html.includes('Input price (USD/M)'))
+    assert.ok(html.includes('Output price (USD/M)'))
+    assert.ok(html.includes('0.6 ~ 1.5'))
+    assert.ok(html.includes('3 ~ 7.5'))
+    assert.ok(html.includes('Requests without historical token prices'))
+  })
   test('populated bill shows daily model tokens, refunds, net cost and current wallet balance', () => {
     const html = renderToStaticMarkup(<BillDetails bill={billFixture} />)
     assert.ok(html.includes('Daily usage by model'))

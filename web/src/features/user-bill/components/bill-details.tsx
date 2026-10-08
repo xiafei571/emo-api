@@ -18,7 +18,7 @@ For commercial licensing, please contact support@quantumnous.com
 */
 import { useTranslation } from 'react-i18next'
 
-import { formatBillMoney } from '../lib/bill'
+import { formatBillMoney, formatBillPrice } from '../lib/bill'
 import type { BillUsage, UserBill } from '../types'
 
 function UsageTable(props: {
@@ -41,6 +41,13 @@ function UsageTable(props: {
               t('Charges'),
               t('Refunds'),
               t('Net cost'),
+              t('Input price (USD/M)'),
+              t('Output price (USD/M)'),
+              t('Cache read price (USD/M)'),
+              t('Cache write price (USD/M)'),
+              t('Cache write 5m price (USD/M)'),
+              t('Cache write 1h price (USD/M)'),
+              t('Requests without historical token prices'),
             ].map((label) => (
               <th key={label} className='p-2'>
                 {label}
@@ -69,6 +76,19 @@ function UsageTable(props: {
               <td className='p-2'>
                 {formatBillMoney(row.net_quota / props.quotaPerUnit)}
               </td>
+              {[
+                'input',
+                'output',
+                'cache_read',
+                'cache_write',
+                'cache_write_5m',
+                'cache_write_1h',
+              ].map((key) => (
+                <td key={key} className='p-2'>
+                  {formatBillPrice(row.prices?.[key])}
+                </td>
+              ))}
+              <td className='p-2'>{row.unpriced_requests ?? 0}</td>
             </tr>
           ))}
         </tbody>
@@ -144,6 +164,11 @@ export function BillDetails(props: { bill: UserBill }) {
         </p>
       )}
       <h3 className='font-medium'>{t('Usage by model')}</h3>
+      <p className='text-muted-foreground text-xs'>
+        {t(
+          'Historical USD/M prices include group discounts. Multiple prices show a range. Missing metadata, per-call and dynamic pricing show no token price.'
+        )}
+      </p>
       <UsageTable
         rows={bill.models}
         quotaPerUnit={bill.quota_per_unit}

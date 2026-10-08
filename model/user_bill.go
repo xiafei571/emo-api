@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -12,13 +13,67 @@ import (
 
 // BillUsage uses int64 totals: a multi-month bill can exceed a quota column's int32 range.
 type BillUsage struct {
-	Date             string `json:"date"`
-	Model            string `json:"model"`
-	PromptTokens     int64  `json:"prompt_tokens"`
-	CompletionTokens int64  `json:"completion_tokens"`
-	ChargedQuota     int64  `json:"charged_quota"`
-	RefundedQuota    int64  `json:"refunded_quota"`
-	NetQuota         int64  `json:"net_quota"`
+	Date             string                    `json:"date"`
+	Model            string                    `json:"model"`
+	PromptTokens     int64                     `json:"prompt_tokens"`
+	CompletionTokens int64                     `json:"completion_tokens"`
+	ChargedQuota     int64                     `json:"charged_quota"`
+	RefundedQuota    int64                     `json:"refunded_quota"`
+	NetQuota         int64                     `json:"net_quota"`
+	Prices           map[string]BillPriceRange `json:"prices,omitempty"`
+	UnpricedRequests int64                     `json:"unpriced_requests"`
+}
+
+type BillPriceRange struct {
+	Min float64 `json:"min"`
+	Max float64 `json:"max"`
+}
+
+// Historical per-million token rates include the effective group discount.
+// Missing metadata, dynamic expressions and per-call billing cannot be inferred
+// from total cost and token counts (cache and tool fees can contribute to cost).
+func historicalBillPrices(other string) map[string]float64 {
+	var metadata struct {
+		ModelRatio           *float64 `json:"model_ratio"`
+		GroupRatio           *float64 `json:"group_ratio"`
+		UserGroupRatio       *float64 `json:"user_group_ratio"`
+		CompletionRatio      *float64 `json:"completion_ratio"`
+		CacheRatio           *float64 `json:"cache_ratio"`
+		CacheCreationRatio   *float64 `json:"cache_creation_ratio"`
+		CacheCreationRatio5m *float64 `json:"cache_creation_ratio_5m"`
+		CacheCreationRatio1h *float64 `json:"cache_creation_ratio_1h"`
+		ModelPrice           float64  `json:"model_price"`
+		BillingMode          string   `json:"billing_mode"`
+	}
+	if common.UnmarshalJsonStr(other, &metadata) != nil || metadata.ModelRatio == nil || metadata.ModelPrice > 0 || metadata.BillingMode == "tiered_expr" {
+		return nil
+	}
+	group := metadata.GroupRatio
+	if metadata.UserGroupRatio != nil && *metadata.UserGroupRatio != -1 {
+		group = metadata.UserGroupRatio
+	}
+	if group == nil || *group < 0 || *metadata.ModelRatio < 0 {
+		return nil
+	}
+	base := *metadata.ModelRatio * 2 * *group
+	if math.IsNaN(base) || math.IsInf(base, 0) {
+		return nil
+	}
+	prices := map[string]float64{"input": base}
+	for key, ratio := range map[string]*float64{
+		"output": metadata.CompletionRatio, "cache_read": metadata.CacheRatio,
+		"cache_write": metadata.CacheCreationRatio, "cache_write_5m": metadata.CacheCreationRatio5m,
+		"cache_write_1h": metadata.CacheCreationRatio1h,
+	} {
+		if ratio == nil || *ratio < 0 {
+			continue
+		}
+		price := base * *ratio
+		if !math.IsNaN(price) && !math.IsInf(price, 0) {
+			prices[key] = price
+		}
+	}
+	return prices
 }
 
 type BillRecharge struct {
@@ -69,7 +124,7 @@ func GetUserBill(ctx context.Context, userID int, start, end time.Time, location
 		Daily: []BillUsage{}, Models: []BillUsage{}, Recharges: []BillRecharge{},
 	}
 	rows, err := LOG_DB.WithContext(ctx).Model(&Log{}).
-		Select("created_at", "type", "model_name", "quota", "prompt_tokens", "completion_tokens").
+		Select("created_at", "type", "model_name", "quota", "prompt_tokens", "completion_tokens", "other").
 		Where("user_id = ? AND created_at >= ? AND created_at < ? AND type IN ?", userID, start.Unix(), end.Unix(), []int{LogTypeConsume, LogTypeRefund}).Rows()
 	if err != nil {
 		return nil, err
@@ -87,8 +142,27 @@ func GetUserBill(ctx context.Context, userID int, start, end time.Time, location
 		key := usageKey{date, log.ModelName}
 		day, model := daily[key], models[log.ModelName]
 		day.Date, day.Model, model.Model = date, log.ModelName, log.ModelName
+		var prices map[string]float64
+		if log.Type == LogTypeConsume {
+			prices = historicalBillPrices(log.Other)
+		}
 		for _, total := range []*BillUsage{&day, &model, &bill.Totals} {
 			if log.Type == LogTypeConsume {
+				if len(prices) == 0 {
+					total.UnpricedRequests++
+				}
+				for key, price := range prices {
+					if total.Prices == nil {
+						total.Prices = make(map[string]BillPriceRange)
+					}
+					rangeValue, exists := total.Prices[key]
+					if !exists {
+						rangeValue = BillPriceRange{Min: price, Max: price}
+					}
+					rangeValue.Min = math.Min(rangeValue.Min, price)
+					rangeValue.Max = math.Max(rangeValue.Max, price)
+					total.Prices[key] = rangeValue
+				}
 				total.PromptTokens += int64(log.PromptTokens)
 				total.CompletionTokens += int64(log.CompletionTokens)
 				total.ChargedQuota += int64(log.Quota)

@@ -59,7 +59,7 @@ func TestUserBillAggregatesLocalDaysActualChargesRefundsAndLargeTotals(t *testin
 	assert.Equal(t, int64(500), bill.Totals.RefundedQuota)
 	assert.Equal(t, int64(3999999600), bill.Totals.NetQuota)
 	require.Len(t, bill.Daily, 3)
-	assert.Equal(t, BillUsage{Date: "2026-04-01", Model: "model-a", PromptTokens: 150, CompletionTokens: 50, ChargedQuota: 4000000000, NetQuota: 4000000000}, bill.Daily[0])
+	assert.Equal(t, BillUsage{Date: "2026-04-01", Model: "model-a", PromptTokens: 150, CompletionTokens: 50, ChargedQuota: 4000000000, NetQuota: 4000000000, UnpricedRequests: 2}, bill.Daily[0])
 	assert.Equal(t, int64(-500), bill.Daily[1].NetQuota)
 	require.Len(t, bill.Models, 2)
 	assert.Equal(t, int64(3999999500), bill.Models[0].NetQuota)
@@ -120,4 +120,39 @@ func TestUserBillHandlesDSTCalendarBoundariesAndEmptyRecords(t *testing.T) {
 	assert.Error(t, err)
 	_, err = GetUserBill(context.Background(), user.Id, start, start.AddDate(1, 0, 0), location)
 	assert.Error(t, err)
+}
+
+func TestUserBillHistoricalPricesIncludeDiscountsAndPreserveDailyChanges(t *testing.T) {
+	db := setupUserBillDB(t)
+	user := User{Username: "historical-prices"}
+	require.NoError(t, db.Create(&user).Error)
+	start := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
+	logs := []Log{
+		{UserId: user.Id, CreatedAt: start.Unix(), Type: LogTypeConsume, ModelName: "model", Other: `{"model_ratio":1.5,"group_ratio":0.5,"user_group_ratio":-1,"completion_ratio":5,"cache_ratio":0.1,"cache_creation_ratio":1.25,"cache_creation_ratio_5m":1.25,"cache_creation_ratio_1h":2}`},
+		{UserId: user.Id, CreatedAt: start.Unix() + 1, Type: LogTypeConsume, ModelName: "model", Other: `{"model_ratio":1.5,"group_ratio":0.5,"user_group_ratio":0.2,"completion_ratio":5,"cache_ratio":0.1}`},
+		{UserId: user.Id, CreatedAt: start.Unix() + 2, Type: LogTypeRefund, ModelName: "model", Other: `{"model_ratio":999,"group_ratio":1}`},
+		{UserId: user.Id, CreatedAt: start.Unix() + 3, Type: LogTypeConsume, ModelName: "model", Other: `{"model_ratio":999,"group_ratio":1,"model_price":0.5}`},
+		{UserId: user.Id, CreatedAt: start.Unix() + 4, Type: LogTypeConsume, ModelName: "model", Other: `{"model_ratio":999,"group_ratio":1,"billing_mode":"tiered_expr"}`},
+		{UserId: user.Id, CreatedAt: start.Unix() + 5, Type: LogTypeConsume, ModelName: "model", Other: `invalid`},
+	}
+	require.NoError(t, db.Create(&logs).Error)
+	bill, err := GetUserBill(context.Background(), user.Id, start, start.AddDate(0, 0, 1), time.UTC)
+	require.NoError(t, err)
+	require.Len(t, bill.Daily, 1)
+	assert.InDelta(t, 0.6, bill.Daily[0].Prices["input"].Min, 1e-10)
+	assert.Equal(t, 1.5, bill.Daily[0].Prices["input"].Max)
+	assert.InDelta(t, 3.0, bill.Daily[0].Prices["output"].Min, 1e-10)
+	assert.Equal(t, 7.5, bill.Daily[0].Prices["output"].Max)
+	assert.Equal(t, BillPriceRange{Min: 1.875, Max: 1.875}, bill.Daily[0].Prices["cache_write"])
+	assert.Equal(t, BillPriceRange{Min: 3, Max: 3}, bill.Daily[0].Prices["cache_write_1h"])
+	assert.Equal(t, int64(3), bill.Daily[0].UnpricedRequests)
+	assert.Equal(t, bill.Daily[0].Prices, bill.Models[0].Prices)
+}
+
+func TestHistoricalBillPricesDoNotInventMissingRatesAndAllowFreeRates(t *testing.T) {
+	for _, other := range []string{`{}`, `{"model_ratio":1}`, `{"model_ratio":-1,"group_ratio":1}`, `{"model_ratio":1,"group_ratio":-1}`} {
+		assert.Nil(t, historicalBillPrices(other))
+	}
+	prices := historicalBillPrices(`{"model_ratio":1,"group_ratio":1,"user_group_ratio":0,"completion_ratio":2}`)
+	assert.Equal(t, map[string]float64{"input": 0, "output": 0}, prices)
 }

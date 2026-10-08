@@ -101,6 +101,10 @@ export function billToCSV(bill: UserBill): string {
     ['Refunds', bill.totals.refunded_quota / bill.quota_per_unit],
     ['Net cost', bill.totals.net_quota / bill.quota_per_unit],
     [
+      'Price basis',
+      'Historical USD/M rates include effective group discounts. Ranges indicate different rates in the period. Missing metadata, per-call and dynamic billing cannot provide token rates.',
+    ],
+    [
       'Scope',
       'Retained records only. Usage includes wallet and subscription charges. Recharge credits exclude subscriptions, gifts and manual adjustments. Balance is current, not period-end.',
     ],
@@ -114,6 +118,13 @@ export function billToCSV(bill: UserBill): string {
       'Charges (USD)',
       'Refunds (USD)',
       'Net cost (USD)',
+      'Input price (USD/M)',
+      'Output price (USD/M)',
+      'Cache read price (USD/M)',
+      'Cache write price (USD/M)',
+      'Cache write 5m price (USD/M)',
+      'Cache write 1h price (USD/M)',
+      'Requests without historical token prices',
     ],
   ]
   for (const usage of bill.daily) {
@@ -126,6 +137,15 @@ export function billToCSV(bill: UserBill): string {
       usage.charged_quota / bill.quota_per_unit,
       usage.refunded_quota / bill.quota_per_unit,
       usage.net_quota / bill.quota_per_unit,
+      ...[
+        'input',
+        'output',
+        'cache_read',
+        'cache_write',
+        'cache_write_5m',
+        'cache_write_1h',
+      ].map((key) => formatBillPrice(usage.prices?.[key])),
+      usage.unpriced_requests ?? 0,
     ])
   }
   rows.push([], ['Recharge date', 'Order', 'Payment method', 'Credits (USD)'])
@@ -150,4 +170,15 @@ export function billToCSV(bill: UserBill): string {
         .join(',')
     )
     .join('\r\n')}`
+}
+
+export function formatBillPrice(price?: { min: number; max: number }): string {
+  if (!price) return '—'
+  const format = (value: number): string =>
+    new Intl.NumberFormat('en-US', {
+      useGrouping: false,
+      maximumFractionDigits: 10,
+    }).format(value)
+  if (price.min === price.max) return format(price.min)
+  return `${format(price.min)} ~ ${format(price.max)}`
 }
