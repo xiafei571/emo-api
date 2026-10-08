@@ -22,24 +22,6 @@ import { formatCatalogRate, getDiscountPricing } from '../lib/discount-price'
 import type { PricingModel } from '../types'
 
 const columns = ['input', 'output', 'cache', 'create_cache']
-const labels: Record<string, string> = {
-  input: 'Input',
-  output: 'Output',
-  cache: 'Cache read',
-  create_cache: 'Cache write',
-  cache_write_1h: 'Cache write (1h)',
-  image: 'Image input',
-  image_output: 'Image output',
-  audio_input: 'Audio input',
-  audio_output: 'Audio output',
-}
-const tierLabels: Record<string, string> = {
-  peak: 'Peak',
-  off_peak: 'Off-peak',
-  base: 'Base',
-  standard: 'Standard',
-  long_context: 'Long context',
-}
 const weekdays = [
   'Sunday',
   'Monday',
@@ -115,52 +97,6 @@ export function DiscountPriceRow(props: {
             'This model uses request-dependent billing. A fixed token price cannot be quoted; check the billing details before use.'
           )}
         </p>
-      )}
-      {pricing.tiers.length > 0 && (
-        <details className='mt-2 text-[10px]'>
-          <summary className='cursor-pointer font-medium'>
-            {t('Pricing tiers and conditions')}
-          </summary>
-          <div className='mt-2 space-y-2'>
-            {pricing.tiers.map((tier) => (
-              <div key={tier.label} className='bg-muted/30 rounded-md p-2'>
-                <div className='font-medium'>
-                  {t(tierLabels[tier.label] ?? tier.label)}
-                </div>
-                {tier.conditions.length > 0 && (
-                  <div className='text-muted-foreground'>
-                    {tier.conditions
-                      .map(
-                        (condition) =>
-                          `${t(condition.var === 'c' ? 'Output tokens' : 'Input context tokens')} ${condition.op} ${condition.value.toLocaleString()}`
-                      )
-                      .join(' · ')}
-                  </div>
-                )}
-                {!schedule &&
-                  pricing.tiers.length > 1 &&
-                  tier.conditions.length === 0 && (
-                    <div className='text-muted-foreground'>
-                      {t(
-                        'Applies when the preceding tier conditions do not match'
-                      )}
-                    </div>
-                  )}
-                <div className='mt-1 flex flex-wrap gap-x-3 gap-y-1'>
-                  {Object.entries(tier.rates).map(([key, rate]) => (
-                    <span key={key}>
-                      {t(labels[key] ?? key)}:{' '}
-                      <strong className='font-mono'>
-                        {formatCatalogRate(rate)}
-                      </strong>
-                      /M
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </details>
       )}
       {!pricing.dynamic && pricing.rates.cache_write_1h && (
         <p className='text-muted-foreground mt-2 text-[10px]'>

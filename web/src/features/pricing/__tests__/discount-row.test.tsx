@@ -41,7 +41,7 @@ const model: PricingModel = {
     '(weekday("Asia/Shanghai") >= 1 && weekday("Asia/Shanghai") <= 5 && ((hour("Asia/Shanghai") >= 9 && hour("Asia/Shanghai") < 12) || (hour("Asia/Shanghai") >= 14 && hour("Asia/Shanghai") < 18))) ? tier("peak", p * 3 + c * 9 + cr * 0.10) : tier("off_peak", p * 1.5 + c * 4.5 + cr * 0.05)',
 }
 
-test('dynamic group rows display discounted ranges and disclose peak schedule and expandable tiers', () => {
+test('dynamic group rows display discounted ranges and disclose peak schedule without tier controls', () => {
   const html = renderToStaticMarkup(
     <DiscountPriceRow model={model} group='Deepseek' ratio={0.1} />
   )
@@ -51,8 +51,6 @@ test('dynamic group rows display discounted ranges and disclose peak schedule an
   assert.ok(html.includes('Monday–Friday'))
   assert.ok(html.includes('09:00–12:00, 14:00–18:00'))
   assert.ok(html.includes('Asia/Shanghai'))
-  assert.ok(html.includes('<summary'))
-  assert.ok(html.includes('Pricing tiers and conditions'))
   assert.ok(!html.includes('line-through'))
 })
 test('unsupported expressions show request-dependent pricing without quoting stale fixed rates', () => {
